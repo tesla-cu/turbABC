@@ -5,6 +5,9 @@ from scipy.stats import gaussian_kde
 
 from utils import timer
 from time import time
+import plotting
+
+
 
 
 def calc_final_C(accepted, num_bin_joint, C_limits, path):
@@ -35,7 +38,7 @@ def calc_final_C(accepted, num_bin_joint, C_limits, path):
         logging.info('Estimated parameters from joint pdf: {}'.format(C_final_joint))
     #
     # # Gaussian smoothness
-    Z, C_final_smooth = kde.gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_joint)
+    Z, C_final_smooth = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_joint)
 
     # np.savetxt(os.path.join(path['output'], 'C_final_smooth'+str(self.num_bin_joint)), self.C_final_smooth)
     np.savetxt(os.path.join(path['output'], 'C_final_smooth'), C_final_smooth)
@@ -60,6 +63,7 @@ def calc_marginal_pdf(Z, num_bin_joint, C_limits, path):
                 ind = tuple(np.where(np.logical_and(params != i, params != j))[0])
                 H = np.sum(Z, axis=ind)
                 np.savetxt(os.path.join(path['output'], 'marginal_smooth{}{}'.format(i, j)), H)
+
 
 def gaussian_kde_scipy(data, a, b, num_bin_joint):
     dim = len(a)
@@ -90,7 +94,7 @@ def gaussian_kde_scipy(data, a, b, num_bin_joint):
             C_max.append(xgrid[i])
     elif dim == 2:
         ygrid = np.linspace(a[1], b[1], num_bin_joint + 1)
-        Xgrid, Ygrid= np.meshgrid(xgrid, ygrid, indexing='ij')
+        Xgrid, Ygrid = np.meshgrid(xgrid, ygrid, indexing='ij')
         Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel()]))
         Z = Z.reshape(Xgrid.shape)
     elif dim == 3:
@@ -117,3 +121,41 @@ def gaussian_kde_scipy(data, a, b, num_bin_joint):
     time2 = time()
     timer(time1, time2, "Time for gaussian_kde_scipy")
     return Z, C_max
+
+
+def main():
+
+    basefolder = './ABC/without_noise/40_biger_range/'
+
+    path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots/')}
+    logging.basicConfig(
+        format="%(levelname)s: %(name)s:  %(message)s",
+        handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABC_log_post')), logging.StreamHandler()],
+        level=logging.DEBUG)
+
+    calibration = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
+    dist = np.load(os.path.join(path['output'], 'calibration.npz'))['dist']
+    C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits'))
+
+    eps_k = plotting.plot_dist_pdf(path, dist.max(1), 0.05)
+    ####################################################################################################################
+    min_dist = np.min(np.max(dist, axis=1))
+    logging.info('min dist = {}'.format(min_dist))
+    logging.info('eps = {}'.format(eps_k))
+    # logging.info('noise = {}'.format((eps_k-min_dist)*0.03))
+    dist_k = dist
+    accepted = calibration[np.where(dist_k.max(1) < eps_k)[0]]
+    logging.info('accepted {}% ({}/{})'.format(np.round((accepted.shape[0]/calibration.shape[0])*100, 2),
+                                               accepted.shape[0], calibration.shape[0]))
+    if accepted.shape[0] == 0:
+        print("There is no accepted parametes, consider increasing eps.")
+        exit()
+    np.savez(os.path.join(path['output'], 'accepted.npz'), C=accepted)
+    ####################################################################################################################
+    num_bin_joint = 20
+    Z, C_final_smooth = calc_final_C(accepted, num_bin_joint, C_limits, path)
+    calc_marginal_pdf(Z, num_bin_joint, C_limits, path)
+
+
+if __name__ == '__main__':
+    main()

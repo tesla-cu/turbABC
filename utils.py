@@ -46,7 +46,6 @@ def pdf_from_array_with_x(array, bins, range):
     return x, pdf
 
 
-
 def axisymmetric_expansion():
     S = np.zeros(6)
     s = -(1 / 2.45)
@@ -76,3 +75,13 @@ def plane_strain():
     S[0] = 1/2
     S[1] = -1/2
     return S
+
+
+def periodic(t):
+    S = np.zeros(6)
+    s0 = 3.3
+    beta = 0.125
+    S[3] = (s0 / 2) * np.sin(beta * s0 * t)  #applied shear
+    return S
+
+

@@ -56,26 +56,25 @@ def RungeKutta(f, tspan, u0, t_step):
 def RungeKuttaFehlberg(f, args, tspan, u0, t_step, TOL=1e-8):
     """
     Algorithm 5.3  in Numerical analisys 9th Burden Faires
-    One popular technique that uses Inequality for error control is the Runge-Kutta-Fehlberg method. 
-    This technique uses a Runge-Kutta method with local truncation error of order five,
-    to estimate the local error in a Runge-Kutta method of order four. 
-    (An advantage to this method is that only six evaluations of f are required per step. Arbitrary
-    Runge-Kutta methods of orders four and five used together
-    require at least four evaluations of f for the fourth-order method and an additional six for
-    the fifth-order method, for a total of at least ten function evaluations. So the Runge-Kutta-
-    Fehlberg method has at least a 40% decrease in the number of function evaluations over the
-    use of a pair of arbitrary fourth- and fifth-order methods.)
-    
-    R - differense between these two methods    
-    
-    Input:
-    f - function on the right side of ODE
-    tspan -- list of time interval ends
-    u0 -- the initial conditions u(t0) = u0,
-    t_step -- step by time.
+    One popular technique that uses Inequality for error control is the Runge-Kutta-Fehlberg method. This technique uses
+    a Runge-Kutta method with local truncation error of order five, to estimate the local error in a Runge-Kutta method
+    of order four. (An advantage to this method is that only six evaluations of f are required per step. Arbitrary
+    Runge-Kutta methods of orders four and five used together require at least four evaluations of f for the
+    fourth-order method and an additional six for the fifth-order method, for a total of at least ten function
+    evaluations. So the Runge-Kutta-Fehlberg method has at least a 40% decrease in the number of function evaluations
+    over the use of a pair of arbitrary fourth- and fifth-order methods.)
+
+    R - differense between these two methods
+    :param f: function on the right side of ODE
+    :param args: additioanl arguments for f function, except t and u
+    :param tspan: list of time interval ends
+    :param u0: the initial conditions u(t0) = u0
+    :param t_step: maximum step by time
+    :param TOL: tolerance of simulation
+    :return: array of time series and array of solution
     """
 
-    logging.info("RungeKuttaFehlberg Method")
+    # logging.info("RungeKuttaFehlberg Method")
     t = []
     u = []
     t0, tEnd = tspan[0], tspan[-1]
@@ -100,14 +99,17 @@ def RungeKuttaFehlberg(f, args, tspan, u0, t_step, TOL=1e-8):
             t.append(t0)
             u.append(u0)
             counter += 1
-        # Calculate new t_step   
-        delta = 0.84 * (TOL / R) ** 0.25
-        if delta <= 0.1:
-            t_step = 0.1 * t_step
-        elif delta >= 4:
+        # Calculate new t_step
+        if R == 0:
             t_step = 4 * t_step
         else:
-            t_step = delta * t_step
+            delta = 0.84 * (TOL / R) ** 0.25
+            if delta <= 0.1:
+                t_step = 0.1 * t_step
+            elif delta >= 4:
+                t_step = 4 * t_step
+            else:
+                t_step = delta * t_step
         if t_step > t_step_max:
             t_step = t_step_max
 
