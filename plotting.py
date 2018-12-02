@@ -4,10 +4,10 @@ mpl.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import main as m
+import abc_alg as m
 import utils
 
-plt.style.use('dark_background')
+# plt.style.use('dark_background')
 
 fig_width_pt = 1.5*246.0  # Get this from LaTeX using "The column width is: \the\columnwidth \\"
 inches_per_pt = 1.0/72.27               # Convert pt to inches
@@ -103,15 +103,15 @@ def plot_periodic(x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, path):
     fig = plt.figure(figsize=(fig_width, 1.5*fig_height))
     ax = plt.gca()
 
-    ax.plot(x1, y1, label='periodic 1')
+    ax.plot(x1, y1, label=r'$\omega/S_{max} = 0.125$')
     ax.scatter(period1_k[:, 0], period1_k[:, 1], marker='^')
-    ax.plot(x2, y2, label='periodic 2')
+    ax.plot(x2, y2, label=r'$\omega/S_{max} = 0.25$')
     ax.scatter(period2_k[:, 0], period2_k[:, 1], marker='>')
-    ax.plot(x3, y3, label='periodic 3')
+    ax.plot(x3, y3, label=r'$\omega/S_{max} = 0.5$')
     ax.scatter(period3_k[:, 0], period3_k[:, 1], marker='o')
-    ax.plot(x4, y4, label='periodic 4')
+    ax.plot(x4, y4, label=r'$\omega/S_{max} = 0.75$')
     ax.scatter(period4_k[:, 0], period4_k[:, 1], marker='<')
-    ax.plot(x4, y4, label='periodic 5')
+    ax.plot(x4, y4, label=r'$\omega/S_{max} = 1$')
     ax.scatter(period5_k[:, 0], period5_k[:, 1], marker='v')
 
     ax.set_xlabel(r'$S\cdot t$')
@@ -136,8 +136,8 @@ def plot_marginal_smooth_pdf(path, C_limits):
     max_value = int(max_value)
     cmap = plt.cm.jet  # define the colormap
     cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
-    cmaplist[0] = 'black'   # force the first color entry to be black
-    # cmaplist[0] = 'white' # force the first color entry to be white
+    # cmaplist[0] = 'black'   # force the first color entry to be black
+    cmaplist[0] = 'white' # force the first color entry to be white
     cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
 
     fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
@@ -176,6 +176,18 @@ def plot_marginal_smooth_pdf(path, C_limits):
                         ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
                     elif N_params == 4:
                         ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
+                    textstr = '\n'.join((
+                        r'$C_1=%.3f$' % (c_final_smooth[0],),
+                        r'$C_2=%.3f$' % (c_final_smooth[1],),
+                        r'$C_{\epsilon1}=%.3f$' % (c_final_smooth[2],),
+                        r'$C_{\epsilon2}=%.3f$' % (c_final_smooth[3],)))
+                    # these are matplotlib.patch.Patch properties
+                    # props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+                    # place a text box in upper left in axes coords
+                    ax.text(0.15, -1.6, textstr, transform=ax.transAxes, fontsize=14,
+                            verticalalignment='top', linespacing=1.5)
+
+
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
@@ -192,8 +204,10 @@ def plot_marginal_smooth_pdf(path, C_limits):
 
                 im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                extent=ext, vmin=0, vmax=max_value)
-    cax = plt.axes([0.05, 0.1, 0.01, 0.26])
-    plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
+    # cax = plt.axes([0.05, 0.1, 0.01, 0.26])
+    # plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
+
+
 
     if N_params == 3:
         # fig.subplots_adjust(left=0.02, right=0.9, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
@@ -224,7 +238,7 @@ def plot_dist_pdf(path, dist, x):
 
 
 def main():
-    basefolder = './ABC/noise/imp_20/'
+    basefolder = './ABC/without_noise/40_bigger_domain/'
 
     path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots/')}
     if not os.path.isdir(path['plots']):
@@ -243,7 +257,7 @@ def main():
     err = np.zeros(13)
 
     S = utils.axisymmetric_expansion()
-    tspan = [0, 1.6 / S[0]]
+    tspan = [0, 1.6 / np.abs(S[0])]
     Tnke1, Ynke1 = m.RK(f=m.rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, S))
     err[0] = m.calc_err(np.abs(S[0]) * Tnke1, Ynke1[:, 0], axi_exp_k[:, 0], axi_exp_k[:, 1])
     err[9] = m.calc_err(np.abs(S[0]) * Tnke1, Ynke1[:, 2], axi_exp_b[:, 0], 2 * axi_exp_b[:, 1])
@@ -259,7 +273,7 @@ def main():
     S = utils.pure_shear()
     tspan = [0, 5.2/ (2*S[3])]
     Tnke3, Ynke3 = m.RK(f=m.rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, S))
-    err[11] = m.calc_err(2 * S[3] * Tnke3, Ynke3[:, 0], shear_k[:, 0], shear_k[:, 1])
+    err[2] = m.calc_err(2 * S[3] * Tnke3, Ynke3[:, 0], shear_k[:, 0], shear_k[:, 1])
     x3, y3, y3b = 2*S[3]*Tnke3, Ynke3[:, 0], Ynke3[:, 2]
 
     S = utils.plane_strain()
@@ -287,7 +301,7 @@ def main():
     err[8] = m.calc_err(s0 * Tnke9, Ynke9[:, 0], period5_k[:, 0], period5_k[:, 1])
     x9, y9 = s0 * Tnke9, Ynke9[:, 0]
 
-    print('err_k= ', err[:4])
+    print('err_k = ', err[:4])
     print('err_k periodic = ', err[4:9])
     print('err_b  = ', err[9:])
 

@@ -77,11 +77,16 @@ def plane_strain():
     return S
 
 
-def periodic(t):
-    S = np.zeros(6)
-    s0 = 3.3
-    beta = 0.125
-    S[3] = (s0 / 2) * np.sin(beta * s0 * t)  #applied shear
-    return S
+# def periodic(t):
+#     S = np.zeros(6)
+#     s0 = 3.3
+#     beta = 0.125
+#     S[3] = (s0 / 2) * np.sin(beta * s0 * t)  #applied shear
+#     return S
 
 
+def covariance_recursive(x, t, cov_prev, mean_prev, s_d):
+    mean_new = t / (t + 1) * mean_prev + 1 / (t + 1) * x
+    cov = (t - 1) / t * cov_prev + \
+          s_d / t * (t * np.outer(mean_prev, mean_prev) - (t + 1) * np.outer(mean_new, mean_new) + np.outer(x, x))
+    return cov, mean_new

@@ -137,14 +137,13 @@ def main():
     dist = np.load(os.path.join(path['output'], 'calibration.npz'))['dist']
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits'))
 
-    eps_k = plotting.plot_dist_pdf(path, dist.max(1), 0.05)
+    eps_k = plotting.plot_dist_pdf(path, dist, 0.05)
     ####################################################################################################################
-    min_dist = np.min(np.max(dist, axis=1))
+    min_dist = np.min(dist)
     logging.info('min dist = {}'.format(min_dist))
     logging.info('eps = {}'.format(eps_k))
     # logging.info('noise = {}'.format((eps_k-min_dist)*0.03))
-    dist_k = dist
-    accepted = calibration[np.where(dist_k.max(1) < eps_k)[0]]
+    accepted = calibration[np.where(dist < eps_k)[0]]
     logging.info('accepted {}% ({}/{})'.format(np.round((accepted.shape[0]/calibration.shape[0])*100, 2),
                                                accepted.shape[0], calibration.shape[0]))
     if accepted.shape[0] == 0:
