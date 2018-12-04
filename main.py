@@ -1,10 +1,7 @@
 import numpy as np
 import os
-from odeSolveMethods import RungeKuttaFehlberg as RK
-import plotting
-import utils
+
 import logging
-from time import time
 import postprocess
 import parallel
 import abc_alg
@@ -37,18 +34,7 @@ def main():
         calibration, dist = abc_alg.main_loop_IMCMC(work_func=abc_alg.abc_work_function_periodic)
         np.savez(os.path.join(g.path['output'], 'calibration.npz'), C=calibration, dist=dist)
     ########################################################################################################################
-    # eps_k = 0.06
-    # dist_k = dist
-    # accepted = calibration[np.where(dist_k.max(1) < eps_k)[0]]
-    # logging.info('accepted.shape: {}'.format(accepted.shape))
-    # if accepted.shape[0] == 0:
-    #     logging.info("There is no accepted parametes, consider increasing eps.")
-    #     exit()
-    # np.savez(os.path.join(path['output'], 'accepted.npz'), C=accepted)
-    # ########################################################################################################################
-    # num_bin_joint = 20
-    # Z, C_final_smooth = postprocess.calc_final_C(accepted, num_bin_joint, C_limits, path)
-    # postprocess.calc_marginal_pdf(Z, num_bin_joint, C_limits, path)
+    postprocess.main()
 
 
 if __name__ == '__main__':

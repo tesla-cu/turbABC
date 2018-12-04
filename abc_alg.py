@@ -5,7 +5,7 @@ from time import time
 import utils
 import glob_var as g
 from odeSolveMethods import RungeKuttaFehlberg as RK
-
+from odeSolveMethods import BDF
 # Load in validation data
 folder = './valid_data/'
 axi_exp_k = np.loadtxt(os.path.join(folder, 'axi_exp_k.txt'))
@@ -26,8 +26,7 @@ S_axi_con = utils.axisymmetric_contraction()
 S_pure_shear = utils.pure_shear()
 S_plane_strain = utils.plane_strain()
 S_periodic = np.zeros(6)
-s0 = 3.3
-beta = [0.125, 0.25, 0.5, 0.75, 1]
+
 
 
 def calc_err(x, y, valid_data_x, valid_data_y):
@@ -129,19 +128,22 @@ def abc_work_function_impulsive(c):
 
 def abc_work_function_periodic(c):
 
+    s0 = 3.3
+    beta = [0.125, 0.25, 0.5, 0.75, 1]
     err = np.zeros(5)
 
     # Periodic shear(five different frequencies)
-    tspan = np.array([0, 51])/s0
-    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.1, args=(c, s0, beta[0]))
+    # logging.info('C = {}'.format(c))
+    tspan = [0, 51/s0]
+    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, s0, beta[0]))
     err[0] = calc_err(s0 * Tnke, Ynke[:, 0], period1_k[:, 0], period1_k[:, 1])
-    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.1, args=(c, s0, beta[1]))
+    Tnke, Ynke = BDF(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, s0, beta[1]))
     err[1] = calc_err(s0 * Tnke, Ynke[:, 0], period2_k[:, 0], period2_k[:, 1])
-    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.1, args=(c, s0, beta[2]))
+    Tnke, Ynke = BDF(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, s0, beta[2]))
     err[2] = calc_err(s0 * Tnke, Ynke[:, 0], period3_k[:, 0], period3_k[:, 1])
-    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.1, args=(c, s0, beta[3]))
+    Tnke, Ynke = BDF(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, s0, beta[3]))
     err[3] = calc_err(s0 * Tnke, Ynke[:, 0], period4_k[:, 0], period4_k[:, 1])
-    Tnke, Ynke = RK(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.1, args=(c, s0, beta[4]))
+    Tnke, Ynke = BDF(f=rans_periodic, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.01, args=(c, s0, beta[4]))
     err[4] = calc_err(s0 * Tnke, Ynke[:, 0], period5_k[:, 0], period5_k[:, 1])
 
     result = np.hstack((c, np.max(err))).tolist()
@@ -206,10 +208,7 @@ def main_loop_IMCMC(work_func):
     C_array = C_start.tolist()
     ####################################################################################################################
     # Markov chains
-    print(main_loop(work_function_MCMC, C_array))
-
-
-    # return main_loop(work_function_MCMC, C_array)
+    return main_loop(work_function_MCMC, C_array)
 
 
 def work_function_MCMC(C_init):

@@ -5,8 +5,7 @@ Created on Fri Apr 15 10:15:50 2016
 @author: olga
 """
 import numpy as np
-import math as m
-import logging.config
+from scipy.integrate import ode
 
 TINY = 1e-10
 DOFIGA = 1e10
@@ -93,12 +92,14 @@ def RungeKuttaFehlberg(f, args, tspan, u0, t_step, TOL=1e-8):
         k5 = t_step * f(t0 + t_step, u0 + k1 * 439 / 216 - k2 * 8 + k3 * 3680 / 513 - k4 * 845 / 4104, args)
         k6 = t_step * f(t0 + t_step / 2, u0 - k1 * 8 / 27 + k2 * 2 - k3 * 3544 / 2565 + k4 * 1859 / 4104 - k5 * 11 / 40, args)
         R = np.max(1 / t_step * np.abs(1 / 360. * k1 - 128 / 4275 * k3 - 2197 / 75240 * k4 + 1 / 50 * k5 + 2 / 55 * k6))
+        # print(R)
         if R <= TOL:
             u0 = u0 + (25 / 216 * k1 + 1408 / 2565 * k3 + 2197 / 4104 * k4 - 1 / 5 * k5)
             t0 += t_step
             t.append(t0)
             u.append(u0)
             counter += 1
+
         # Calculate new t_step
         if R == 0:
             t_step = 4 * t_step
@@ -117,8 +118,26 @@ def RungeKuttaFehlberg(f, args, tspan, u0, t_step, TOL=1e-8):
             time_flag = False
         elif t_step < t_step_min:
             time_flag = False
-            print("Minimum t_step exceeded")
+            print("Minimum t_step exceeded with C={}".format(args[0]))
         else:
             t_step = min(t_step, tEnd - t0)
     # print("Number of iteration = ", counter)
     return np.array(t), np.array(u)
+
+
+def BDF(f, args, tspan, u0, t_step, TOL=1e-8):
+
+    t = []
+    y = []
+    solver = ode(f)
+    solver.set_integrator('vode', atol=TOL, rtol=1e-6, method='bdf')
+    solver.set_f_params(args)
+    solver.set_initial_value(u0, tspan[0])
+
+    while solver.successful() and solver.t < tspan[1]:
+        t.append(solver.t)
+        y.append(solver.integrate(tspan[1], step=True))
+
+    return np.array(t), np.array(y)
+
+

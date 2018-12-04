@@ -2,16 +2,16 @@ import numpy as np
 
 path = None
 N_proc = 4
-C_limits = np.array([[1.0, 1.8],
-                     [0.6, 0.77],
-                     [1.7, 2],
-                     [1.85, 2.05]])
+C_limits = np.array([[1.0, 2.8],
+                     [0.35, 1.3],
+                     [1.35, 2.2],
+                     [1.5, 2.5]])
 
 
-# algorithm = 'abc'
-N = 4
-algorithm = 'imcmc'
-N_chain = 100
+algorithm = 'abc'
+N = 10
+# algorithm = 'imcmc'
+N_chain = 10
 x = 0.05
 
 
