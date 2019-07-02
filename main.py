@@ -1,6 +1,5 @@
 import numpy as np
 import os
-
 import logging
 import postprocess
 import parallel
@@ -22,16 +21,25 @@ logging.basicConfig(
 
 def main():
 
+
+    # Initialization
+    if g.case == 'impulsive':
+        work_func = abc_alg.abc_work_function_impulsive
+    elif g.case == 'periodic':
+        work_func = abc_alg.abc_work_function_periodic
+
+
+    # Run
     g.par_process = parallel.Parallel(1, g.N_proc)
     if g.algorithm == 'abc':
         logging.info('C_limits:{}'.format(g.C_limits))
         np.savetxt(os.path.join(g.path['output'], 'C_limits'), g.C_limits)
         C_array = abc_alg.sampling('uniform', g.C_limits, g.N)
-        calibration, dist = abc_alg.main_loop(abc_alg.abc_work_function_periodic, C_array)
+        calibration, dist = abc_alg.main_loop(work_func, C_array)
         np.savez(os.path.join(g.path['output'], 'calibration.npz'), C=calibration, dist=dist)
         ################################################################################################################
     else:
-        calibration, dist = abc_alg.main_loop_IMCMC(work_func=abc_alg.abc_work_function_periodic)
+        calibration, dist = abc_alg.main_loop_IMCMC(work_func=work_func)
         np.savez(os.path.join(g.path['output'], 'calibration.npz'), C=calibration, dist=dist)
     ########################################################################################################################
     postprocess.main()

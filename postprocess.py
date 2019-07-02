@@ -179,7 +179,7 @@ def marginal_confidence(path, level):
 
 def main():
 
-    basefolder = './ABC/noise/rans_15/'
+    basefolder = './ABC/rans_13/'
 
     path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots/')}
     logging.basicConfig(
@@ -187,26 +187,26 @@ def main():
         handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABC_log_post')), logging.StreamHandler()],
         level=logging.DEBUG)
 
-    # calibration = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
-    accepted = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
+    calibration = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
+    # accepted = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
     dist = np.load(os.path.join(path['output'], 'calibration.npz'))['dist']
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits'))
 
-    # eps_k = plotting.plot_dist_pdf(path, dist, 0.05)
-    # ####################################################################################################################
-    # min_dist = np.min(dist)
-    # logging.info('min dist = {}'.format(min_dist))
-    # logging.info('eps = {}'.format(eps_k))
-    # # logging.info('noise = {}'.format((eps_k-min_dist)*0.03))
-    # accepted = calibration[np.where(dist < eps_k)[0]]
-    # logging.info('accepted {}% ({}/{})'.format(np.round((accepted.shape[0]/calibration.shape[0])*100, 2),
-    #                                            accepted.shape[0], calibration.shape[0]))
-    # if accepted.shape[0] == 0:
-    #     print("There is no accepted parametes, consider increasing eps.")
-    #     exit()
-    # np.savez(os.path.join(path['output'], 'accepted.npz'), C=accepted)
+    eps_k = plotting.plot_dist_pdf(path, dist, 0.05)
     ####################################################################################################################
-    num_bin_joint = 15
+    min_dist = np.min(dist)
+    logging.info('min dist = {}'.format(min_dist))
+    logging.info('eps = {}'.format(eps_k))
+    # logging.info('noise = {}'.format((eps_k-min_dist)*0.03))
+    accepted = calibration[np.where(dist < eps_k)[0]]
+    logging.info('accepted {}% ({}/{})'.format(np.round((accepted.shape[0]/calibration.shape[0])*100, 2),
+                                               accepted.shape[0], calibration.shape[0]))
+    if accepted.shape[0] == 0:
+        print("There is no accepted parametes, consider increasing eps.")
+        exit()
+    np.savez(os.path.join(path['output'], 'accepted.npz'), C=accepted)
+    ####################################################################################################################
+    num_bin_joint = 20
     calc_marginal_pdf2(accepted, num_bin_joint, C_limits, path)
 
     Z, C_final_smooth = calc_final_C(accepted, num_bin_joint, C_limits, path)

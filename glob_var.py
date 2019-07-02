@@ -18,3 +18,7 @@ x = 0.05
 std = 0.0
 eps = 0.0
 par_process = None
+
+
+norm_order = 2               # options: 1 - max, 2 - second norm
+case = 'impulsive'          # options: 'impulsive', 'periodic', 'both'

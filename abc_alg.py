@@ -1,11 +1,14 @@
 import numpy as np
 import logging
 import os
-from time import time
 import utils
 import glob_var as g
+from time import time
+from numpy.linalg import norm as norm2
 from odeSolveMethods import RungeKuttaFehlberg as RK
 from odeSolveMethods import BDF
+
+
 # Load in validation data
 folder = './valid_data/'
 axi_exp_k = np.loadtxt(os.path.join(folder, 'axi_exp_k.txt'))
@@ -28,12 +31,25 @@ S_plane_strain = utils.plane_strain()
 S_periodic = np.zeros(6)
 
 
-
-def calc_err(x, y, valid_data_x, valid_data_y):
+def calc_err_norm1(x, y, valid_data_x, valid_data_y):
     points = np.interp(valid_data_x, x, y)
     points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
     diff = points - valid_data_y
+    # diff = (points - valid_data_y)/valid_data_y
     return np.max(np.abs(diff))
+
+
+def calc_err_norm2(x, y, valid_data_x, valid_data_y):
+    points = np.interp(valid_data_x, x, y)
+    points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
+    diff = norm2(points - valid_data_y)
+    return diff
+
+
+if g.norm_order == 1:
+    calc_err = calc_err_norm1
+elif g.norm_order == 2:
+    calc_err = calc_err_norm2
 
 
 def rans(t, x, args):
@@ -55,7 +71,7 @@ def rans(t, x, args):
     # Governing equations
     dx = np.zeros(8)
     dx[0] = P - e                               # dk / dt
-    dx[1] = (c[2] * P - c[3] * e) * e / k         # de / dt
+    dx[1] = (c[2] * P - c[3] * e) * e / k       # de / dt
     dx[2:] = -alf1 * e * a / k + alf2 * S       # d a_ij / dt
     return dx
 
@@ -81,7 +97,7 @@ def rans_periodic(t, x, args):
     # Governing equations
     dx = np.zeros(8)
     dx[0] = P - e                               # dk / dt
-    dx[1] = (c[2] * P - c[3] * e) * e / k         # de / dt
+    dx[1] = (c[2] * P - c[3] * e) * e / k       # de / dt
     dx[2:] = -alf1 * e * a / k + alf2 * S       # d a_ij / dt
     return dx
 
@@ -105,22 +121,22 @@ def abc_work_function_impulsive(c):
     err[0] = calc_err(np.abs(S_axi_exp[0]) * Tnke, Ynke[:, 0], axi_exp_k[:, 0], axi_exp_k[:, 1])
     # err[9] = calc_err(np.abs(S_axi_exp[0]) * Tnke, Ynke[:, 2], axi_exp_b[:, 0], 2 * axi_exp_b[:, 1])
 
-    # axisymmetric contraction
-    tspan = [0, 1.6 / np.abs(S_axi_con[0])]
-    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_axi_con))
-    err[1] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 0], axi_con_k[:, 0], axi_con_k[:, 1])
-    # err[10] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 2], axi_con_b[:, 0], 2 * axi_con_b[:, 1])
-
-    # pure shear
-    tspan = [0, 5.2/ (2*S_pure_shear[3])]
-    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_pure_shear))
-    err[2] = calc_err(2 * S_pure_shear[3] * Tnke, Ynke[:, 0], shear_k[:, 0], shear_k[:, 1])
-
-    # plane strain
-    tspan = [0, 1.6/S_plane_strain[0]]
-    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_plane_strain))
-    err[3] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 0], plane_k[:, 0], plane_k[:, 1])
-    # err[7] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 2], plane_b[:, 0], 2 * plane_b[:, 1])
+    # # axisymmetric contraction
+    # tspan = [0, 1.6 / np.abs(S_axi_con[0])]
+    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_axi_con))
+    # err[1] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 0], axi_con_k[:, 0], axi_con_k[:, 1])
+    # # err[10] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 2], axi_con_b[:, 0], 2 * axi_con_b[:, 1])
+    #
+    # # pure shear
+    # tspan = [0, 5.2/ (2*S_pure_shear[3])]
+    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_pure_shear))
+    # err[2] = calc_err(2 * S_pure_shear[3] * Tnke, Ynke[:, 0], shear_k[:, 0], shear_k[:, 1])
+    #
+    # # plane strain
+    # tspan = [0, 1.6/S_plane_strain[0]]
+    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_plane_strain))
+    # err[3] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 0], plane_k[:, 0], plane_k[:, 1])
+    # # err[7] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 2], plane_b[:, 0], 2 * plane_b[:, 1])
 
     result = np.hstack((c, np.max(err))).tolist()
     return result
@@ -225,7 +241,7 @@ def work_function_MCMC(C_init):
     t0 = 50  # initial period witout adaptation
 
     # add first param
-
+    # TODO: change abc_work_function_impulsive everywhere in this function
     result[0, :] = abc_work_function_impulsive(C_init)
 
     mean_prev = 0

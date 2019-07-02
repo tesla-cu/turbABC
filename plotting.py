@@ -119,7 +119,7 @@ def plot_periodic(x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, path):
     ax.set_xlabel(r'$S\cdot t$')
     ax.set_ylabel(r'$k/k_0$')
     ax.axis(xmin=0, ymin=0, xmax=51)
-    plt.legend(loc=0, labelspacing=0.2)
+    plt.legend(loc=2, labelspacing=0.2, borderpad=0.0)
     fig.subplots_adjust(left=0.16, right=0.98, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(path, 'compare_periodic'))
 
@@ -328,7 +328,7 @@ def plot_bootstrapping_pdf(path, dist, x, i, C_limit, C_final):
 
 
 def main():
-    basefolder = './ABC/noise/imp_mcmc/'
+    basefolder = './ABC/rans_13/'
 
     path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots/')}
     if not os.path.isdir(path['plots']):
@@ -339,7 +339,7 @@ def main():
     s0 = 3.3
     beta = [0.125, 0.25, 0.5, 0.75, 1]
     ####################################################################################################################
-    # plot_marginal_pdf(path, C_limits)
+    plot_marginal_pdf(path, C_limits)
     plot_marginal_smooth_pdf(path, C_limits)
 
     c = np.loadtxt(os.path.join(path['output'], 'C_final_smooth'))
