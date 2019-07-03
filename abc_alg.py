@@ -121,24 +121,24 @@ def abc_work_function_impulsive(c):
     err[0] = calc_err(np.abs(S_axi_exp[0]) * Tnke, Ynke[:, 0], axi_exp_k[:, 0], axi_exp_k[:, 1])
     # err[9] = calc_err(np.abs(S_axi_exp[0]) * Tnke, Ynke[:, 2], axi_exp_b[:, 0], 2 * axi_exp_b[:, 1])
 
-    # # axisymmetric contraction
-    # tspan = [0, 1.6 / np.abs(S_axi_con[0])]
-    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_axi_con))
-    # err[1] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 0], axi_con_k[:, 0], axi_con_k[:, 1])
+    # axisymmetric contraction
+    tspan = [0, 1.6 / np.abs(S_axi_con[0])]
+    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_axi_con))
+    err[1] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 0], axi_con_k[:, 0], axi_con_k[:, 1])
     # # err[10] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 2], axi_con_b[:, 0], 2 * axi_con_b[:, 1])
-    #
-    # # pure shear
-    # tspan = [0, 5.2/ (2*S_pure_shear[3])]
-    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_pure_shear))
+
+    # pure shear
+    tspan = [0, 5.2/ (2*S_pure_shear[3])]
+    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_pure_shear))
     # err[2] = calc_err(2 * S_pure_shear[3] * Tnke, Ynke[:, 0], shear_k[:, 0], shear_k[:, 1])
-    #
-    # # plane strain
-    # tspan = [0, 1.6/S_plane_strain[0]]
-    # Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_plane_strain))
-    # err[3] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 0], plane_k[:, 0], plane_k[:, 1])
+
+    # plane strain
+    tspan = [0, 1.6/S_plane_strain[0]]
+    Tnke, Ynke = RK(f=rans, tspan=tspan, u0=[1, 1, 0, 0, 0, 0, 0, 0], t_step=0.05, args=(c, S_plane_strain))
+    err[3] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 0], plane_k[:, 0], plane_k[:, 1])
     # # err[7] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 2], plane_b[:, 0], 2 * plane_b[:, 1])
 
-    result = np.hstack((c, np.max(err))).tolist()
+    result = np.hstack((c, np.sum(err))).tolist()
     return result
 
 
@@ -166,10 +166,16 @@ def abc_work_function_periodic(c):
     return result
 
 
-def main_loop(work_func, C_array):
+if g.case == 'impulsive':
+    work_function = abc_work_function_impulsive
+elif g.case == 'periodic':
+    work_function = abc_work_function_periodic
+
+
+def main_loop(C_array):
     N_params = len(C_array[0])
     start = time()
-    g.par_process.run(func=work_func, tasks=C_array)
+    g.par_process.run(func=work_function, tasks=C_array)
     result = g.par_process.get_results()
     end = time()
     if g.algorithm == 'abc':
@@ -183,13 +189,13 @@ def main_loop(work_func, C_array):
     return accepted, dist
 
 
-def main_loop_IMCMC(work_func):
+def main_loop_IMCMC():
 
     C_array = sampling('uniform', g.C_limits, 5)
     logging.info('Calibration step with {} samples'.format(len(C_array)))
 
     start_calibration = time()
-    g.par_process.run(func=work_func, tasks=C_array)
+    g.par_process.run(func=work_function, tasks=C_array)
     S_init = g.par_process.get_results()
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step')
@@ -237,12 +243,11 @@ def work_function_MCMC(C_init):
     eps = g.eps
 
     result = np.empty((N, N_params + 1), dtype=np.float32)
-    s_d = 2.4 ** 2 / N_params  # correct covariance according dimensionality
-    t0 = 50  # initial period witout adaptation
+    s_d = 2.4 ** 2 / N_params  # correct covariance according to dimensionality
+    t0 = 50  # initial period without adaptation
 
     # add first param
-    # TODO: change abc_work_function_impulsive everywhere in this function
-    result[0, :] = abc_work_function_impulsive(C_init)
+    result[0, :] = work_function(C_init)
 
     mean_prev = 0
     cov_prev = 0
@@ -265,7 +270,7 @@ def work_function_MCMC(C_init):
                     c = np.random.multivariate_normal(result[i - 1, :-1], cov=cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
-            distance = abc_work_function_impulsive(c)
+            distance = work_function(c)
             counter_dist += 1
             if distance[-1] <= eps:
                 result[i, :] = distance

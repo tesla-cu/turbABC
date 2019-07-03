@@ -187,6 +187,7 @@ def main():
         handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABC_log_post')), logging.StreamHandler()],
         level=logging.DEBUG)
 
+    logging.info('\n#############POSTPROCESSING############')
     calibration = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
     # accepted = np.load(os.path.join(path['output'], 'calibration.npz'))['C']
     dist = np.load(os.path.join(path['output'], 'calibration.npz'))['dist']

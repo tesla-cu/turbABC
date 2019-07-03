@@ -9,6 +9,7 @@ C_limits = np.array([[1.0, 2.8],
 
 
 algorithm = 'abc'
+
 N = 10
 # algorithm = 'imcmc'
 N_chain = 10
@@ -17,7 +18,7 @@ x = 0.05
 
 std = 0.0
 eps = 0.0
-par_process = None
+par_process = None  # empty global variable to fill with parallel class in main.py
 
 
 norm_order = 2               # options: 1 - max, 2 - second norm
