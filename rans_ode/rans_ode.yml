@@ -6,7 +6,7 @@ path:
 ########################################################################################################################
 case: 'impulsive'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
 ########################################################################################################################
-abc_algorithm: 'abc_MCMC_adaptive'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
+abc_algorithm: 'abc_IMCMC'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
 ## Define only one of the following
 #################################################################################################################
@@ -18,8 +18,12 @@ algorithm:
   abc_IMCMC:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
-      N_calibration: 10       # recommended 10
-      x: 0.5                  # percent of accepted for calibration step
+      N_calibration:
+        - 6       # recommended 10
+        - 6       # recommended 10
+      x:
+        - 0.3                  # percent of accepted for calibration step 1
+        - 0.1                  # percent of accepted for calibration step 2
       phi: 1
       prior_update: 10         # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
       # MCMC

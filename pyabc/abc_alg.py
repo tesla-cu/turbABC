@@ -64,28 +64,64 @@ def mcmc_chains(C_init, adaptive=False):
     return accepted, dist
 
 
-def calibration(C_array, x, phi, prior_update):
+def calibration(algorithm_input, C_limits):
 
-    logging.info('Calibration step with {} samples'.format(len(C_array)))
-    N_params = len(C_array[0])
+    N_params = len(C_limits)
     work_function = define_work_function()
+    x = algorithm_input['x']
+    logging.info('Sampling {}'.format(algorithm_input['sampling']))
+    C_array = sampling(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][0])
+    logging.info('Calibration step 1 with {} samples'.format(len(C_array)))
+
     start_calibration = time()
     g.par_process.run(func=work_function, tasks=C_array)
     S_init = g.par_process.get_results()
     end_calibration = time()
-    utils.timer(start_calibration, end_calibration, 'Time of calibration step')
+    utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
 
     # Define epsilon
-    logging.info('x = {}'.format(x))
+    logging.info('x = {}'.format(x[0]))
     S_init.sort(key=lambda y: y[-1])
     S_init = np.array(S_init)
-    g.eps = np.percentile(S_init, q=int(x * 100), axis=0)[-1]
+    eps = np.percentile(S_init, q=int(x[0] * 100), axis=0)[-1]
+    logging.info('eps after calibration step = {}'.format(eps))
+    np.savez(os.path.join(g.path['calibration'], 'calibration.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
+
+    # Define new range
+    g.C_limits = np.empty_like(C_limits)
+    for i in range(N_params):
+        max_S = np.max(S_init[:, i])
+        min_S = np.min(S_init[:, i])
+        if max_S - min_S < 1e-5:
+            min_S -= g.std[i]
+            max_S += g.std[i]
+        half_length = algorithm_input['phi'] * (max_S - min_S) / 2.0
+        middle = (max_S + min_S) / 2.0
+        g.C_limits[i] = np.array([middle - half_length, middle + half_length])
+    logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
+    np.savetxt(os.path.join(g.path['calibration'], 'C_limits'), g.C_limits)
+
+    # Second calibration step
+    logging.info('Sampling {}'.format(algorithm_input['sampling']))
+    C_array = sampling(algorithm_input['sampling'], g.C_limits, algorithm_input['N_calibration'][1])
+    logging.info('Calibration step 2 with {} samples'.format(len(C_array)))
+    start_calibration = time()
+    g.par_process.run(func=work_function, tasks=C_array)
+    S_init = g.par_process.get_results()
+    end_calibration = time()
+    utils.timer(start_calibration, end_calibration, 'Time of calibration step 2')
+
+    # Define epsilon again
+    logging.info('x = {}'.format(x[1]))
+    S_init.sort(key=lambda y: y[-1])
+    S_init = np.array(S_init)
+    g.eps = np.percentile(S_init, q=int(x[1] * 100), axis=0)[-1]
     logging.info('eps after calibration step = {}'.format(g.eps))
     np.savez(os.path.join(g.path['calibration'], 'calibration.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
 
     # Define std
     S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-    g.std = phi*np.std(S_init[:, :-1], axis=0)
+    g.std = algorithm_input['phi']*np.std(S_init[:, :-1], axis=0)
     logging.info('std for each parameter after calibration step:{}'.format(g.std))
     for i, std in enumerate(g.std):
         if std < 1e-8:
@@ -93,31 +129,18 @@ def calibration(C_array, x, phi, prior_update):
             logging.warning('Artificially added std! Consider increasing number of samples for calibration step')
             logging.warning('new std for each parameter after calibration step:{}'.format(g.std))
 
-    # Define new range
-    for i in range(N_params):
-        max_S = np.max(S_init[:, i])
-        min_S = np.min(S_init[:, i])
-        if max_S - min_S < 1e-5:
-            min_S -= g.std[i]
-            max_S += g.std[i]
-        half_length = phi * (max_S - min_S) / 2.0
-        middle = (max_S + min_S) / 2.0
-        g.C_limits[i] = np.array([middle - half_length, middle + half_length])
-    logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
-    np.savetxt(os.path.join(g.path['calibration'], 'C_limits'), g.C_limits)
-
     # update prior based on accepted parameters in calibration
-    if prior_update:
+    if algorithm_input['prior_update']:
         prior, C_calibration = utils.gaussian_kde_scipy(data=S_init[:, :-1],
                                                         a=g.C_limits[:, 0],
                                                         b=g.C_limits[:, 1],
-                                                        num_bin_joint=prior_update)
+                                                        num_bin_joint=algorithm_input['prior_update'])
         logging.info('Estimated parameter after calibration step is {}'.format(C_calibration))
         np.savez(os.path.join(g.path['calibration'], 'prior.npz'), Z=prior)
         np.savetxt(os.path.join(g.path['calibration'], 'C_final_smooth'), C_calibration)
-        prior_grid = np.empty((N_params, prior_update+1))
+        prior_grid = np.empty((N_params, algorithm_input['prior_update']+1))
         for i, limits in enumerate(g.C_limits):
-            prior_grid[i] = np.linspace(limits[0], limits[1], prior_update+1)
+            prior_grid[i] = np.linspace(limits[0], limits[1], algorithm_input['prior_update']+1)
         g.prior_interpolator = RegularGridInterpolator(prior_grid, prior, bounds_error=False)
 
     # Randomly choose starting points for Markov chains
@@ -176,7 +199,6 @@ def one_chain(C_init):
             while True:
                 counter_sample += 1
                 c = np.random.normal(result[i - 1, :-1], g.std)
-                print('{} {} {} {}'.format(i, counter_sample, counter_dist, c))
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             distance = work_function(c)
@@ -194,7 +216,6 @@ def one_chain(C_init):
             while True:
                 counter_sample += 1
                 c = np.random.multivariate_normal(result[i - 1, :-1], cov=s_d*cov_prev)
-                print('{} {} {} {}'.format(i, counter_sample, counter_dist, c))
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             distance = work_function(c)
