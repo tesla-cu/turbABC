@@ -188,5 +188,7 @@ venv.bak/
 .idea/
 output/
 plots/
-tmp/
-ABC_first_attempt/
+/tmp/
+/ABC_first_attempt/
+/pyabc.zip
+/rans_ode.zip
