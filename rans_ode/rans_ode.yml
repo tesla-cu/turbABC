@@ -6,7 +6,7 @@ path:
 ########################################################################################################################
 case: 'impulsive'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
 ########################################################################################################################
-abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
+abc_algorithm: 'abc_IMCMC'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
 ## Define only one of the following
 #################################################################################################################
@@ -19,8 +19,8 @@ algorithm:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
       N_calibration:
-        - 10                  # recommended 10
-        - 10                  # recommended 10
+        - 6                  # recommended 10
+        - 6                  # recommended 10
       x:
         - 0.1                  # percent of accepted for calibration step 1
         - 0.1                  # percent of accepted for calibration step 2

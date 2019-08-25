@@ -12,6 +12,7 @@ Truth = None
 Strain = None
 case = None
 prior_interpolator = None
+target_acceptance = None
 
 norm_order = 2               # options: 1 - max, 2 - second norm
 

@@ -54,11 +54,11 @@ def main():
     elif input['abc_algorithm'] == 'abc_IMCMC':    # MCMC with calibration step (Wegmann 2009)
         logging.info("ABC-MCMC algorithm")
         logging.info('Calibration')
-        C_array_for_chains = abc_alg.calibration(algorithm_input, C_limits)
+        abc_alg.calibration(algorithm_input, C_limits)
         logging.info('Chains')
         g.N_per_chain = algorithm_input['N_per_chain']
         g.t0 = algorithm_input['t0']
-        abc_alg.mcmc_chains(C_array_for_chains)
+        abc_alg.mcmc_chains(n_chains=g.par_process.proc)
     elif input['abc_algorithm'] == 'abc_MCMC_adaptive':
         logging.info("ABC-MCMC algorithm with adaptation")
         logging.info('Chains')
@@ -66,8 +66,9 @@ def main():
         g.N_per_chain = algorithm_input['N_per_chain']
         g.target_acceptance = algorithm_input['target_acceptance']
         g.t0 = algorithm_input['t0']
-        C_array = abc_alg.sampling('random', C_limits, input['parallel_threads'])
-        abc_alg.mcmc_chains(C_array, adaptive=True)
+        C_start = abc_alg.sampling('random', C_limits, input['parallel_threads'])
+        np.savetxt(os.path.join(g.path['calibration'], 'C_start'), C_start)
+        abc_alg.mcmc_chains(n_chains=g.par_process.proc)
     else:
         logging.warning('{} algorithm does not exist'.format(input['abc_algorithm']))
     ####################################################################################################################

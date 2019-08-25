@@ -18,25 +18,11 @@ def sampling(sampling, C_limits, N):
     return array
 
 
-def define_work_function():
-    if g.case == 'impulsive':
-        work_function = workfunc_rans.abc_work_function_impulsive
-    elif g.case == 'periodic':
-        work_function = workfunc_rans.abc_work_function_periodic
-    elif g.case == 'decay':
-        work_function = workfunc_rans.abc_work_function_decay
-    elif g.case == 'strain_relax':
-        work_function = workfunc_rans.abc_work_function_strain_relax
-    else:
-        logging.error('Unknown work function {}'.format(g.case))
-    return work_function
-
-
 def abc_classic(C_array):
 
     N_params = len(C_array[0])
     N = len(C_array)
-    work_function = define_work_function()
+    work_function = workfunc_rans.define_work_function()
     start = time()
     g.par_process.run(func=work_function, tasks=C_array)
     result = g.par_process.get_results()
@@ -59,30 +45,10 @@ def abc_classic(C_array):
     return
 
 
-def mcmc_chains(C_init, adaptive=False):
-
-    N_params = len(C_init[0])
-    if adaptive:
-        run_function = one_chain_adaptive
-    else:
-        run_function = one_chain
-    start = time()
-    g.par_process.run(func=run_function, tasks=C_init)
-    result = g.par_process.get_results()
-    end = time()
-    accepted = np.array([chunk[:N_params] for item in result for chunk in item])
-    sumstat = np.array([chunk[N_params:-1] for item in result for chunk in item])
-    dist = np.array([chunk[-1] for item in result for chunk in item])
-    utils.timer(start, end, 'Time for running chains')
-    np.savez(os.path.join(g.path['output'], 'accepted.npz'), C=accepted, sumstat=sumstat, dist=dist)
-    logging.debug('Number of accepted parameters: {}'.format(len(accepted)))
-    return accepted, dist
-
-
 def calibration(algorithm_input, C_limits):
 
     N_params = len(C_limits)
-    work_function = define_work_function()
+    work_function = workfunc_rans.define_work_function()
     x = algorithm_input['x']
     logging.info('Sampling {}'.format(algorithm_input['sampling']))
     C_array = sampling(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][0])
@@ -164,20 +130,44 @@ def calibration(algorithm_input, C_limits):
     C_start = (S_init[np.random.choice(S_init.shape[0], g.par_process.proc, replace=False), :N_params])
     np.set_printoptions(precision=3)
     logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
-    C_array = C_start.tolist()
-    return C_array
+    np.savetxt(os.path.join(g.path['calibration'], 'C_start'), C_start)
+    return
 
 
-def one_chain(C_init):
+def mcmc_chains(n_chains):
+
+    # N_params = len(C_init[0])
+    start = time()
+    g.par_process.run(func=one_chain, tasks=np.arange(n_chains))
+    result = g.par_process.get_results()
+    end = time()
+    # accepted = np.array([chunk[:N_params] for item in result for chunk in item])
+    # sumstat = np.array([chunk[N_params:-1] for item in result for chunk in item])
+    # dist = np.array([chunk[-1] for item in result for chunk in item])
+    utils.timer(start, end, 'Time for running chains')
+    # np.savez(os.path.join(g.path['output'], 'accepted.npz'), C=accepted, sumstat=sumstat, dist=dist)
+    # logging.debug('Number of accepted parameters: {}'.format(len(accepted)))
+    return
+
+
+def one_chain(id):
     N = g.N_per_chain
     C_limits = g.C_limits
+    N_params = len(g.C_limits)
+    C_init = np.loadtxt(os.path.join(g.path['calibration'], 'C_start')).reshape((-1, N_params))[id]
     N_params = len(C_init)
-    work_function = define_work_function()
+    work_function = workfunc_rans.define_work_function()
     result = np.empty((N, N_params + len(g.Truth.sumstat_true) + 1), dtype=np.float32)
     s_d = 2.4 ** 2 / N_params  # correct covariance according to dimensionality
 
     # add first param
     result[0, :] = work_function(C_init)
+
+    if g.target_acceptance is not None:
+        delta = result[0, -1]
+        std = np.sqrt(0.1 * (C_limits[:, 1] - C_limits[:, 0]))
+        target_acceptance = g.target_acceptance
+        
     ####################################################################################################################
     def mcmc_step_burn_in(i):
         nonlocal counter_sample, counter_dist
@@ -210,6 +200,7 @@ def one_chain(C_init):
         cov_prev, mean_prev = utils.covariance_recursive(result[i, :N_params], i, cov_prev, mean_prev)
         return
 
+    ####################################################################################################################
     def mcmc_step_burn_in_prior(i):
         nonlocal counter_sample, counter_dist
         while True:
@@ -244,6 +235,44 @@ def one_chain(C_init):
                     break
         cov_prev, mean_prev = utils.covariance_recursive(result[i, :N_params], i, cov_prev, mean_prev)
         return
+
+    ####################################################################################################################
+    def mcmc_step_burn_in_adaptive(i):
+        nonlocal counter_sample, counter_dist, delta, std, target_acceptance
+        while True:
+            while True:
+                counter_sample += 1
+                c = np.random.normal(result[i - 1, :N_params], std)
+                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+                    break
+            sample_value = work_function(c)
+            counter_dist += 1
+            if sample_value[-1] <= delta:  # distance < eps
+                result[i, :] = sample_value
+                delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
+                break
+            else:
+                delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
+        return
+
+    def mcmc_step_adaptive(i):
+        nonlocal mean_prev, cov_prev, counter_sample, counter_dist, delta
+        while True:
+            while True:
+                counter_sample += 1
+                c = np.random.multivariate_normal(result[i - 1, :N_params], cov=s_d * cov_prev)
+                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+                    break
+            sample_value = work_function(c)
+            counter_dist += 1
+            if sample_value[-1] <= delta:  # distance < eps
+                result[i, :] = sample_value
+                delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
+                break
+            else:
+                delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
+        cov_prev, mean_prev = utils.covariance_recursive(result[i, :N_params], i, cov_prev, mean_prev)
+    return
     #######################################################
     # Markov Chain
     counter_sample = 0
@@ -251,12 +280,15 @@ def one_chain(C_init):
     mean_prev = 0
     cov_prev = 0
     # if changed prior after calibration step
-    if g.prior_interpolator is None:
-        mcmc_step_burn_in = mcmc_step_burn_in
-        mcmc_step = mcmc_step
-    else:
+    if g.prior_interpolator is not None:
         mcmc_step_burn_in = mcmc_step_burn_in_prior
         mcmc_step = mcmc_step_prior
+    elif g.target_acceptance is not None:
+        mcmc_step_burn_in = mcmc_step_burn_in_adaptive
+        mcmc_step = mcmc_step_adaptive
+    else:
+        mcmc_step_burn_in = mcmc_step_burn_in
+        mcmc_step = mcmc_step
 
     # burn in period with constant variance
     for i in range(1, min(g.t0, N)):
@@ -274,79 +306,8 @@ def one_chain(C_init):
     print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
     logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
+    np.savez(os.path.join(g.path['output'], 'chain{}.npz'),
+             C=result[:, :N_params], sumstat=result[:, N_params:-1], dist=result[:, -1])
     return result.tolist()
 
 
-def one_chain_adaptive(C_init):
-    N = g.N_per_chain
-    C_limits = g.C_limits
-    N_params = len(C_init)
-    target_acceptance = g.target_acceptance
-    work_function = define_work_function()
-    result = np.empty((N, N_params + len(g.Truth.sumstat_true) + 1), dtype=np.float32)
-    s_d = 2.38 ** 2 / N_params  # correct covariance according to dimensionality
-
-    # add first param
-    result[0, :] = work_function(C_init)
-    delta = result[0, -1]
-    std = np.sqrt(0.1*(C_limits[:, 1] - C_limits[:, 0]))
-
-    ####################################################################################################################
-    def mcmc_step_burn_in_adaptive(i):
-        nonlocal counter_sample, counter_dist, delta, std, target_acceptance
-        while True:
-            while True:
-                counter_sample += 1
-                c = np.random.normal(result[i - 1, :N_params], std)
-                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                    break
-            sample_value = work_function(c)
-            counter_dist += 1
-            if sample_value[-1] <= delta:           # distance < eps
-                result[i, :] = sample_value
-                delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
-                break
-            else:
-                delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
-        return
-
-    def mcmc_step_adaptive(i):
-        nonlocal mean_prev, cov_prev, counter_sample, counter_dist, delta
-        while True:
-            while True:
-                counter_sample += 1
-                c = np.random.multivariate_normal(result[i - 1, :N_params], cov=s_d*cov_prev)
-                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                    break
-            sample_value = work_function(c)
-            counter_dist += 1
-            if sample_value[-1] <= delta:  # distance < eps
-                result[i, :] = sample_value
-                delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
-                break
-            else:
-                delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
-        cov_prev, mean_prev = utils.covariance_recursive(result[i, :N_params], i, cov_prev, mean_prev)
-        return
-    #######################################################
-    # Markov Chain
-    counter_sample = 0
-    counter_dist = 0
-    mean_prev, cov_prev = 0, 0
-    # burn in period with constant variance
-    for i in range(1, min(g.t0, N)):
-        mcmc_step_burn_in_adaptive(i)
-    # define mean and covariance from burn-in period
-    mean_prev = np.mean(result[:g.t0, :N_params], axis=0)
-    cov_prev = s_d * np.cov(result[:g.t0, :N_params].T)
-    # start period with adaptation
-    for i in range(g.t0, N):
-        mcmc_step_adaptive(i)
-        if i % (int(N // 1000)+1) == 0:
-            logging.info("Accepted {} samples".format(i))
-    #######################################################
-    print('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
-    print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
-    logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
-    logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
-    return result.tolist()

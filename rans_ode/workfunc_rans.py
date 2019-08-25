@@ -14,7 +14,18 @@ if g.norm_order == 1:
 elif g.norm_order == 2:
     calc_err = dist.calc_err_norm2
 
-
+def define_work_function():
+    if g.case == 'impulsive':
+        work_function = abc_work_function_impulsive
+    elif g.case == 'periodic':
+        work_function = abc_work_function_periodic
+    elif g.case == 'decay':
+        work_function = abc_work_function_decay
+    elif g.case == 'strain_relax':
+        work_function = abc_work_function_strain_relax
+    else:
+        logging.error('Unknown work function {}'.format(g.case))
+    return work_function
 ########################################################################################################################
 #
 ########################################################################################################################
