@@ -3,13 +3,21 @@ import logging
 import itertools
 from scipy.stats import gaussian_kde
 from time import time
-# import pyabc.glob_var as g
+import pyabc.glob_var as g
 
 
 def timer(start, end, label):
     hours, rem = divmod(end - start, 3600)
     minutes, seconds = divmod(rem, 60)
     logging.info("{:0>1}:{:0>2}:{:05.2f} \t {}".format(int(hours), int(minutes), seconds, label))
+
+
+def take_safe_log10(x):
+    """Takes natural logarithm and put g.TINY number where x = 0"""
+    log_fill = np.empty_like(x)
+    log_fill.fill(g.TINY_log)
+    log = np.log10(x, out=log_fill, where=x > g.TINY)
+    return log
 
 
 def uniform_grid(C_limits, N_each):

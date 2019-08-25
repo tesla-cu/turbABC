@@ -1,4 +1,6 @@
-import numpy as np
+
+TINY_log = -8
+TINY = 10e-8
 
 path = None
 C_limits = None

@@ -13,10 +13,9 @@ class Parallel(object):
         logging.info('Available {} workers'.format(mp.cpu_count()))
 
     def run(self, func, tasks):
-
         pool = mp.Pool(processes=self.proc)
         if self.bar == 1:
-            logging.debug('Progress bar with tqdm package')
+            logging.debug('Progress bar changed')
             try:
                 from tqdm import tqdm
             except ImportError:

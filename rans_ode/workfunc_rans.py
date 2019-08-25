@@ -1,11 +1,12 @@
 import numpy as np
-import logging
 import os
 from numpy.linalg import norm as norm2
 from scipy.integrate import odeint
+from time import time
 
 import rans_ode as rans
 import pyabc.glob_var as g
+from pyabc.utils import take_safe_log10
 
 
 class TruthData(object):
@@ -22,7 +23,6 @@ class TruthData(object):
         if 'periodic' in case:
             self.periodic_k = []
             for i in range(5):
-                print(np.loadtxt(os.path.join(valid_folder, 'period{}_k.txt'.format(i+1))).shape)
                 self.periodic_k.append(np.loadtxt(os.path.join(valid_folder, 'period{}_k.txt'.format(i+1))))
         if 'decay' in case:
             self.decay_a11 = np.loadtxt(os.path.join(valid_folder, 'decay_exp_a.txt'))[:12]
@@ -164,32 +164,35 @@ def abc_work_function_impulsive(c):
     # # err[10] = calc_err(np.abs(S_axi_con[0]) * Tnke, Ynke[:, 2], axi_con_b[:, 0], 2 * axi_con_b[:, 1])
 
     # pure shear
-    tspan = np.linspace(0, 5.2/ (2*g.Strain.pure_shear[3]), 200)
+    tspan = np.linspace(0, 5.2 / (2*g.Strain.pure_shear[3]), 200)
     Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.pure_shear), atol=1e-8, mxstep=200)
     err[2] = calc_err(2 * g.Strain.pure_shear[3] * tspan, Ynke[:, 0], g.Truth.shear_k[:, 0], g.Truth.shear_k[:, 1])
 
     # plane strain
-    tspan = np.linspace(0, 1.6/g.Strain.plane_strain[0], 200)
+    tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
     Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
     err[3] = calc_err(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 0], g.Truth.plane_k[:, 0], g.Truth.plane_k[:, 1])
     # # err[7] = calc_err(np.abs(S_plane_strain[0]) * Tnke, Ynke[:, 2], plane_b[:, 0], 2 * plane_b[:, 1])
-    # print('c = {}, nan = {}'.format(c, (True in np.isnan(err)) or (True in np.isinf(err))))
-    result = np.hstack((c, np.sum(err))).tolist()
+
+    result = np.hstack((c, err)).tolist()
     return result
 
 
 def abc_work_function_periodic(c):
-
+    time1 = time()
     s0 = 3.3
     beta = [0.125, 0.25, 0.5, 0.75, 1]
     err = np.zeros(5)
     u0 = [1, 1, 0, 0, 0, 0, 0, 0]
     # Periodic shear(five different frequencies)
-    tspan = [0, 51/s0]
+    tspan = np.linspace(0, 50/s0, 500)
     for i in range(5):
-        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta[i]), atol=1e-8)
-        err[i] = calc_err(s0 * tspan, np.log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0], g.Truth.periodic_k[i][:, 1])
-    result = np.hstack((c, np.sum(err))).tolist()
+        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta[i]), atol=1e-8, mxstep=200)
+        err[i] = calc_err(s0 * tspan, take_safe_log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0], g.Truth.periodic_k[i][:, 1])
+    result = np.hstack((c, err)).tolist()
+    time2 = time()
+    print(time2-time1)
+    print(time2-time1, 'nan/inf = {}'.format((True in np.isnan(err)) or (True in np.isinf(err))))
     return result
 
 
@@ -198,8 +201,8 @@ def abc_work_function_decay(c):
     err = np.zeros(3)
     u0 = [1, 1, 0.36, -0.08, -0.28, 0, 0, 0]
     # decay
-    tspan = np.linspace(0, 45, 200)
-    Ynke  = odeint(rans.rans_decay, u0, tspan, args=(c,), atol=1e-8)
+    tspan = np.linspace(0, 45, 500)
+    Ynke  = odeint(rans.rans_decay, u0, tspan, args=(c,), atol=1e-8, mxstep=200)
     err[0] = calc_err(tspan, Ynke[:, 2], g.Truth.decay_a11[:, 0], 2 * g.Truth.decay_a11[:, 1])
     err[1] = calc_err(tspan, Ynke[:, 3], g.Truth.decay_a22[:, 0], 2 * g.Truth.decay_a22[:, 1])
     err[2] = calc_err(tspan, Ynke[:, 4], g.Truth.decay_a33[:, 0], 2 * g.Truth.decay_a33[:, 1])
@@ -211,8 +214,8 @@ def abc_work_function_strain_relax(c):
 
     u0 = [1, 1, 0.36, -0.08, -0.28, 0, 0, 0]
     # strain-relaxation
-    tspan = [0, 0.95]
-    Tnke, Ynke = odeint(rans.rans_strain_relax, u0, tspan, args=c, atol=1e-8)
+    tspan = np.linspace(0, 0.95, 500)
+    Tnke, Ynke = odeint(rans.rans_strain_relax, u0, tspan, args=c, atol=1e-8, mxstep=200)
     err = calc_err(Tnke, Ynke[:, 2], g.Truth.strain_relax_a11[:, 0], g.Truth.strain_relax_a11[:, 1])
     result = np.hstack((c, np.sum(err))).tolist()
     return result

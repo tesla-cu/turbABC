@@ -1,5 +1,5 @@
 import numpy as np
-import work_func_rans
+import workfunc_rans
 import pyabc.glob_var as g
 
 
@@ -31,7 +31,7 @@ def rans_periodic(x, t, c, s0, beta):
     :param x:
     :return:
     """
-    S = work_func_rans.StrainTensor.periodic_strain(t, s0, beta)    # applied periodic shear
+    S = workfunc_rans.StrainTensor.periodic_strain(t, s0, beta)    # applied periodic shear
 
     k = x[0]                # turbulence kinetic energy
     e = x[1]                # dissipation rate

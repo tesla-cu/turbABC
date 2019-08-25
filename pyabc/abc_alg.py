@@ -6,7 +6,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 import pyabc.utils as utils
 import pyabc.glob_var as g
-import work_func_rans
+import workfunc_rans
 
 
 def sampling(sampling, C_limits, N):
@@ -20,19 +20,22 @@ def sampling(sampling, C_limits, N):
 
 def define_work_function():
     if g.case == 'impulsive':
-        work_function = work_func_rans.abc_work_function_impulsive
+        work_function = workfunc_rans.abc_work_function_impulsive
     elif g.case == 'periodic':
-        work_function = work_func_rans.abc_work_function_periodic
+        work_function = workfunc_rans.abc_work_function_periodic
     elif g.case == 'decay':
-        work_function = work_func_rans.abc_work_function_decay
+        work_function = workfunc_rans.abc_work_function_decay
     elif g.case == 'strain_relax':
-        work_function = work_func_rans.abc_work_function_strain_relax
+        work_function = workfunc_rans.abc_work_function_strain_relax
+    else:
+        logging.error('Unknown work function {}'.format(g.case))
     return work_function
 
 
 def abc_classic(C_array):
 
     N_params = len(C_array[0])
+    N = len(C_array)
     work_function = define_work_function()
     start = time()
     g.par_process.run(func=work_function, tasks=C_array)
@@ -41,6 +44,15 @@ def abc_classic(C_array):
     utils.timer(start, end, 'Time ')
     all_samples = np.array([C[:N_params] for C in result])
     dist = np.array([C[N_params:] for C in result])
+    writing_size = 5e7
+    if N > writing_size:
+        n = int(N // writing_size)
+        for i in range(n):
+            np.savez(os.path.join(g.path['output'], 'classic_abc{}.npz'.format(i)),
+                     C=all_samples[i*writing_size:(i+1)*writing_size], dist=dist[i*writing_size:(i+1)*writing_size])
+        if N % writing_size != 0:
+            np.savez(os.path.join(g.path['output'], 'classic_abc{}.npz'.format(n)),
+                     C=all_samples[n * writing_size:], dist=dist[n * writing_size:])
     np.savez(os.path.join(g.path['output'], 'all_abc.npz'), C=all_samples, dist=dist)
     return
 
@@ -79,13 +91,15 @@ def calibration(algorithm_input, C_limits):
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
 
+    print('Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
     # Define epsilon
     logging.info('x = {}'.format(x[0]))
     S_init.sort(key=lambda y: y[-1])
     S_init = np.array(S_init)
     eps = np.percentile(S_init, q=int(x[0] * 100), axis=0)[-1]
     logging.info('eps after calibration step = {}'.format(eps))
-    np.savez(os.path.join(g.path['calibration'], 'calibration.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
+    np.savetxt(os.path.join(g.path['calibration'], 'eps1'), [eps])
+    np.savez(os.path.join(g.path['calibration'], 'calibration1.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
 
     # Define new range
     g.C_limits = np.empty_like(C_limits)
@@ -117,12 +131,14 @@ def calibration(algorithm_input, C_limits):
     S_init = np.array(S_init)
     g.eps = np.percentile(S_init, q=int(x[1] * 100), axis=0)[-1]
     logging.info('eps after calibration step = {}'.format(g.eps))
-    np.savez(os.path.join(g.path['calibration'], 'calibration.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
+    np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [g.eps])
+    np.savez(os.path.join(g.path['calibration'], 'calibration2.npz'), C=S_init[:, :-1], dist=S_init[:, -1])
 
     # Define std
     S_init = S_init[np.where(S_init[:, -1] < g.eps)]
     g.std = algorithm_input['phi']*np.std(S_init[:, :-1], axis=0)
     logging.info('std for each parameter after calibration step:{}'.format(g.std))
+    np.savetxt(os.path.join(g.path['calibration'], 'std'), [g.std])
     for i, std in enumerate(g.std):
         if std < 1e-8:
             g.std += 1e-5
@@ -190,7 +206,7 @@ def one_chain(C_init):
             if distance[-1] <= g.eps:
                 result[i, :] = distance
                 break
-        cov_prev, mean_prev = utils.covariance_recursive(result[i, :-1], i, cov_prev, mean_prev, s_d)
+        cov_prev, mean_prev = utils.covariance_recursive(result[i, :-1], i, cov_prev, mean_prev)
         return
 
     def mcmc_step_burn_in_prior(i):

@@ -4,10 +4,10 @@ mpl.use('pdf')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import abc_alg as m
-import utils
-import rans
-from odeSolveMethods import RungeKuttaFehlberg as RK
+import pyabc.abc_alg as m
+import pyabc.utils as utils
+import rans_ode as rans
+from tmp.odeSolveMethods import RungeKuttaFehlberg as RK
 
 # plt.style.use('dark_background')
 
