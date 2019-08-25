@@ -4,10 +4,7 @@ import pyabc.glob_var as g
 
 
 def rans_impulsive(x, t, c, S):
-    """
-    :param x:
-    :return:
-    """
+
     k = x[0]                # turbulence kinetic energy
     e = x[1]                # dissipation rate
     a = np.array(x[2:])     # anisotropy tensor
@@ -26,11 +23,7 @@ def rans_impulsive(x, t, c, S):
 
 
 def rans_periodic(x, t, c, s0, beta):
-    """
 
-    :param x:
-    :return:
-    """
     S = workfunc_rans.StrainTensor.periodic_strain(t, s0, beta)    # applied periodic shear
 
     k = x[0]                # turbulence kinetic energy
@@ -49,12 +42,7 @@ def rans_periodic(x, t, c, s0, beta):
 
 
 def rans_decay(x, t, c):
-    """
-    :param t:
-    :param x:
-    :param args:
-    :return:
-    """
+
     k = x[0]                # turbulence kinetic energy
     e = x[1]                # dissipation rate
     a = np.array(x[2:])     # anisotropy tensor

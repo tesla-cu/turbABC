@@ -4,9 +4,9 @@ path:
   'visua': './plots/'
   'valid_data': './valid_data/'     # truth data
 ########################################################################################################################
-case: 'impulsive'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
+case: 'strain-relax'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
 ########################################################################################################################
-abc_algorithm: 'abc_IMCMC'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
+abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
 ## Define only one of the following
 #################################################################################################################
