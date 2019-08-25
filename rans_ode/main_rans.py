@@ -7,7 +7,7 @@ sys.path.append('/Users/olgadorr/Research/ABC_RANS')
 import pyabc.parallel as parallel
 import pyabc.abc_alg as abc_alg
 import pyabc.glob_var as g
-import workfunc_rans
+import sumstat
 from workfunc_rans import StrainTensor
 
 
@@ -36,7 +36,7 @@ def main():
     # ABC algorithm
     algorithm_input = input['algorithm'][input['abc_algorithm']]
     # RANS ode specific
-    g.Truth = workfunc_rans.TruthData(valid_folder=g.path['valid_data'], case=input['case'])
+    g.Truth = sumstat.TruthData(valid_folder=g.path['valid_data'], case=input['case'])
     g.Strain = StrainTensor(valid_folder=g.path['valid_data'])
     g.case = input['case']
     C_limits = np.array(input['C_limits'])

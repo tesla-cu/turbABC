@@ -44,7 +44,7 @@ def abc_classic(C_array):
     utils.timer(start, end, 'Time ')
     all_samples = np.array([C[:N_params] for C in result])
     dist = np.array([C[N_params:] for C in result])
-    writing_size = 5e7
+    writing_size = 1e7
     if N > writing_size:
         n = int(N // writing_size)
         for i in range(n):
@@ -53,7 +53,8 @@ def abc_classic(C_array):
         if N % writing_size != 0:
             np.savez(os.path.join(g.path['output'], 'classic_abc{}.npz'.format(n)),
                      C=all_samples[n * writing_size:], dist=dist[n * writing_size:])
-    np.savez(os.path.join(g.path['output'], 'all_abc.npz'), C=all_samples, dist=dist)
+    else:
+        np.savez(os.path.join(g.path['output'], 'classic_abc0.npz'), C=all_samples, dist=dist)
     return
 
 
