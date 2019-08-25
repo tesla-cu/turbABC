@@ -20,6 +20,13 @@ def take_safe_log10(x):
     return log
 
 
+def check_output_size(N, N_params, sumstat_size):
+    writing_size = 2 ** 30/8 - 1e5   # max array size for np.savez is 2^30 bytes
+    biggest_array_size = N * max(N_params, sumstat_size)
+    n, r = np.divmod(N, writing_size)
+    return int(n), int(r), int(writing_size)
+
+
 def uniform_grid(C_limits, N_each):
     C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
