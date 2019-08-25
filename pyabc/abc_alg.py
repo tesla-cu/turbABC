@@ -55,8 +55,7 @@ def calibration(algorithm_input, C_limits):
     S_init = g.par_process.get_results()
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
-    print(len(S_init[0]))
-    print('Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
+    logging.debug('After Calibration 1: Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
     # Define epsilon
     logging.info('x = {}'.format(x[0]))
     S_init.sort(key=lambda y: y[-1])
@@ -126,7 +125,7 @@ def calibration(algorithm_input, C_limits):
     C_start = (S_init[np.random.choice(S_init.shape[0], g.par_process.proc, replace=False), :N_params])
     np.set_printoptions(precision=3)
     logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
-    np.savetxt(os.path.join(g.path['calibration'], 'C_start'), C_start)
+    np.savetxt(os.path.join(g.path['output'], 'C_start'), C_start)
     return
 
 
@@ -149,7 +148,7 @@ def result_split(x, N_params):
 
 
 def chain_kernel_const(center, cov):
-    np.random.normal(center, g.std)
+    return np.random.normal(center, g.std)
 
 
 def chain_kernel_adaptive(center, cov):
@@ -160,7 +159,7 @@ def one_chain(chain_id):
     N = g.N_per_chain
     C_limits = g.C_limits
     N_params = len(g.C_limits)
-    C_init = np.loadtxt(os.path.join(g.path['calibration'], 'C_start')).reshape((-1, N_params))[chain_id]
+    C_init = np.loadtxt(os.path.join(g.path['output'], 'C_start')).reshape((-1, N_params))[chain_id]
     N_params = len(C_init)
     work_function = workfunc_rans.define_work_function()
     result_c = np.empty((N, N_params))
@@ -170,10 +169,9 @@ def one_chain(chain_id):
 
     # add first param
     result_c[0], result_sumstat[0], result_dist[0] = result_split(work_function(C_init), N_params)
-
     if g.target_acceptance is not None:
         delta = result_dist[0]
-        std = np.sqrt(0.1 * (C_limits[:, 1] - C_limits[:, 0]))
+        g.std = np.sqrt(0.1 * (C_limits[:, 1] - C_limits[:, 0]))
         target_acceptance = g.target_acceptance
 
     ####################################################################################################################
@@ -206,7 +204,7 @@ def one_chain(chain_id):
             result = work_function(c)
             counter_dist += 1
             if result[-1] <= g.eps:
-                prior_values = g.prior_interpolator([result[i - 1, :N_params], c])
+                prior_values = g.prior_interpolator([result_c[i - 1], c])
                 if np.random.random() < prior_values[0] / prior_values[1]:
                     result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
                     break
@@ -233,7 +231,7 @@ def one_chain(chain_id):
                 delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-    return
+        return
     #######################################################
     # Markov Chain
     counter_sample = 0
@@ -242,19 +240,16 @@ def one_chain(chain_id):
     cov_prev = 0
     # if changed prior after calibration step
     if g.prior_interpolator is not None:
-        mcmc_step_burn_in = mcmc_step_burn_in_prior
         mcmc_step = mcmc_step_prior
     elif g.target_acceptance is not None:
-        mcmc_step_burn_in = mcmc_step_burn_in_adaptive
         mcmc_step = mcmc_step_adaptive
     else:
-        mcmc_step_burn_in = mcmc_step_burn_in
         mcmc_step = mcmc_step
 
     # burn in period with constant variance
     chain_kernel = chain_kernel_const
     for i in range(1, min(g.t0, N)):
-        mcmc_step_burn_in(i)
+        mcmc_step(i)
     # define mean and covariance from burn-in period
     mean_prev = np.mean(result_c[:g.t0], axis=0)
     cov_prev = s_d * np.cov(result_c[:g.t0].T)
@@ -275,8 +270,8 @@ def one_chain(chain_id):
                  sumstat=result_sumstat[i*size:(i+1)*size], dist=result_dist[i*size:(i+1)*size])
     if r:
         np.savez(os.path.join(g.path['output'], 'chain{}_{}.npz'.format(chain_id, n)),
-                 C=c[n * size:], sumstat=sumstat[n * size:], dist=dist[n * size:])
+                 C=result_c[n * size:], sumstat=result_sumstat[n * size:], dist=result_dist[n * size:])
 
-    return result.tolist()
+    return
 
 

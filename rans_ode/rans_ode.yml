@@ -25,7 +25,7 @@ algorithm:
         - 0.1                  # percent of accepted for calibration step 1
         - 0.1                  # percent of accepted for calibration step 2
       phi: 1
-      prior_update: 0          # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
+      prior_update: 10          # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
       # MCMC
       N_per_chain: 150
       t0: 100                  # burn-in period without kernel adaptation
