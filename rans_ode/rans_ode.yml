@@ -4,7 +4,7 @@ path:
   'visua': './plots/'
   'valid_data': './valid_data/'     # truth data
 ########################################################################################################################
-case: 'strain-relax'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
+case: 'periodic'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
 ########################################################################################################################
 abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
