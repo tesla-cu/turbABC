@@ -41,9 +41,6 @@ def abc_classic(C_array):
     return
 
 
-
-
-
 def calibration(algorithm_input, C_limits):
 
     N_params = len(C_limits)

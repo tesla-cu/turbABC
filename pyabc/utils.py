@@ -29,7 +29,7 @@ def check_output_size(N, N_params, sumstat_size):
 
 
 def define_eps(array, x):
-    logging.info('x = {}'.format(x))
+
     array.sort(key=lambda y: y[-1])
     array = np.array(array)
     eps = np.percentile(array, q=int(x * 100), axis=0)[-1]
@@ -89,14 +89,16 @@ def covariance_recursive(x, t, cov_prev, mean_prev):
 
 
 def gaussian_kde_scipy(data, a, b, num_bin_joint):
+
     dim = len(a)
+    logging.info('Gaussian KDE {} dimensions with {} bins per dimension'.format(dim, num_bin_joint))
     C_map = []
-    print(dim, data.shape, a, b)
+    # print(dim, data.shape, a, b)
     data_std = np.std(data, axis=0)
     kde = gaussian_kde(data.T, bw_method='scott')
     f = kde.covariance_factor()
-    bw = f * data_std
-    print('Scott: f, bw = ', f, bw)
+    # bw = f * data_std
+    # print('Scott: f, bw = ', f, bw)
     # kde = gaussian_kde(data.T, bw_method='silverman')
     # f = kde.covariance_factor()
     # bw = f * data_std
