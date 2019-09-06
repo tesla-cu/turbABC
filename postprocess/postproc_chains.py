@@ -22,19 +22,20 @@ def main(args):
 
     ### Paths
     path = input['path']
-
+    N_chains = input['parallel_threads']
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess')), logging.StreamHandler()],
         level=logging.DEBUG)
 
     logging.info('\n############# POSTPROCESSING ############')
-    logging.info('\n############# Classic ABC ############')
-    x_list = [0.01, 0.03, 0.05, 0.1, 0.3, 0.5]
-    C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
+    logging.info('\n############# MCMC-ABC ({} chains) ############'.format(N_chains))
+    C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits'))
     N_params = len(C_limits)
-    files_abc = glob.glob1(path['output'], "classic_abc*.npz")
-    files = [os.path.join(path['output'], i) for i in files_abc]
+    files = np.empty(0)
+    for chain in range(N_chains):
+        files_onechain = glob.glob1(path['output'], "chain{}_*.npz".format(chain))
+        files = np.hstack((files, np.array([os.path.join(path['output'], i) for i in files_onechain])))
     accepted = np.empty((0, N_params))
     dist = np.empty((0, 1))
     sum_stat = np.empty((0, len(np.load(files[0])['sumstat'][0])))
@@ -44,34 +45,28 @@ def main(args):
         accepted = np.vstack((accepted, np.load(file)['C']))
         sum_stat = np.vstack((sum_stat, np.load(file)['sumstat']))
         dist = np.vstack((dist, np.load(file)['dist'].reshape((-1, 1))))
-    data = np.hstack((accepted, dist)).tolist()
-    for x in x_list:
-        logging.info('\n')
-        folder = os.path.join(path['output'], 'x_{}'.format(int(x*100)))
-        if not os.path.isdir(folder):
-            os.makedirs(folder)
-        eps = define_eps(data, x)
-        np.savetxt(os.path.join(folder, 'eps'), [eps])
-        abc_accepted = accepted[np.where(dist < eps)[0]]
-        logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, len(abc_accepted), len(dist)))
-        num_bin_kde = 20
-        num_bin_raw = 20
-        ##############################################################################
-        logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
-        H, C_final_joint = pp.calc_raw_joint_pdf(abc_accepted, num_bin_raw, C_limits)
-        np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
-        pp.calc_marginal_pdf_raw(abc_accepted, num_bin_raw, C_limits, folder)
-        ##############################################################################
-        logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
-        np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
-        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
-        np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
-        pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
+    # data = np.hstack((accepted, dist)).tolist()
+    logging.info('\n')
+    folder = os.path.join(path['output'], 'chains')
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    num_bin_kde = 20
+    num_bin_raw = 20
+    ##############################################################################
+    logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
+    H, C_final_joint = pp.calc_raw_joint_pdf(accepted, num_bin_raw, C_limits)
+    np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
+    pp.calc_marginal_pdf_raw(accepted, num_bin_raw, C_limits, folder)
+    ##############################################################################
+    logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
+    Z, C_final_smooth = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+    np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
+    logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
+    np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
+    pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
 
-        for q in [0.05, 0.1, 0.25]:
-            pp.marginal_confidence(N_params, folder, q)
-
+    for q in [0.05, 0.1, 0.25]:
+        pp.marginal_confidence(N_params, folder, q)
     ####################################################################################################################
     #
     ####################################################################################################################
@@ -87,6 +82,7 @@ def main(args):
     accepted = accepted[ind]
     sum_stat = sum_stat[ind]
     dist = dist[ind]
+    x_list = [0.05, 0.1, 0.3, 0.5, 0.7, 0.8, 1]
     for x in x_list:
         logging.info('\n')
         n = int(x * len(accepted))
