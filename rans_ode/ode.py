@@ -1,6 +1,4 @@
 import numpy as np
-import workfunc_rans
-import pyabc.glob_var as g
 
 
 def rans_impulsive(x, t, c, S):
@@ -22,9 +20,9 @@ def rans_impulsive(x, t, c, S):
     return dx
 
 
-def rans_periodic(x, t, c, s0, beta):
+def rans_periodic(x, t, c, s0, beta, strain_func):
 
-    S = workfunc_rans.StrainTensor.periodic_strain(t, s0, beta)    # applied periodic shear
+    S = strain_func(t, s0, beta)    # applied periodic shear
 
     k = x[0]                # turbulence kinetic energy
     e = x[1]                # dissipation rate
@@ -56,9 +54,9 @@ def rans_decay(x, t, c):
     return dx
 
 
-def rans_strain_relax(x, t, c):
+def rans_strain_relax(x, t, c, strain_func):
 
-    S = g.Strain.strain_relax(t)
+    S = strain_func(t)
 
     k = x[0]                # turbulence kinetic energy
     e = x[1]                # dissipation rate

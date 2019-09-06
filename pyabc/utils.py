@@ -28,6 +28,14 @@ def check_output_size(N, N_params, sumstat_size):
     return int(n), int(r), int(writing_size/biggest_row_size)
 
 
+def define_eps(array, x):
+    logging.info('x = {}'.format(x))
+    array.sort(key=lambda y: y[-1])
+    array = np.array(array)
+    eps = np.percentile(array, q=int(x * 100), axis=0)[-1]
+    return eps
+
+
 def uniform_grid(C_limits, N_each):
     C_tmp = np.linspace(C_limits[0], C_limits[1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2

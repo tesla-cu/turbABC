@@ -1,10 +1,9 @@
 ########################################################################################################################
 path:
-  'output': './output/'
-  'visua': './plots/'
-  'valid_data': './valid_data/'     # truth data
+  'output': '/home/olga/ABC_MCMC/output/'
+  'valid_data': '/home/olga/ABC_MCMC/rans_ode/valid_data/'     # truth data
 ########################################################################################################################
-case: 'periodic'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
+case: 'impulsive'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
 ########################################################################################################################
 abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################

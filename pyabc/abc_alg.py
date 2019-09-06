@@ -41,6 +41,9 @@ def abc_classic(C_array):
     return
 
 
+
+
+
 def calibration(algorithm_input, C_limits):
 
     N_params = len(C_limits)
@@ -56,16 +59,14 @@ def calibration(algorithm_input, C_limits):
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
     logging.debug('After Calibration 1: Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
+
     # Define epsilon
-    logging.info('x = {}'.format(x[0]))
-    S_init.sort(key=lambda y: y[-1])
-    S_init = np.array(S_init)
-    eps = np.percentile(S_init, q=int(x[0] * 100), axis=0)[-1]
-    logging.info('eps after calibration step = {}'.format(eps))
+    eps = utils.define_eps(S_init, x[0], N_params, id=1)
+    logging.info('eps after calibration1 step = {}'.format(eps))
     np.savetxt(os.path.join(g.path['calibration'], 'eps1'), [eps])
     np.savez(os.path.join(g.path['calibration'], 'calibration1.npz'),
              C=S_init[:, :N_params], sumstat=S_init[:, N_params:-1], dist=S_init[:, -1])
-    # Define new range
+
     g.C_limits = np.empty_like(C_limits)
     for i in range(N_params):
         max_S = np.max(S_init[:, i])
@@ -87,12 +88,9 @@ def calibration(algorithm_input, C_limits):
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 2')
 
     # Define epsilon again
-    logging.info('x = {}'.format(x[1]))
-    S_init.sort(key=lambda y: y[-1])
-    S_init = np.array(S_init)
-    g.eps = np.percentile(S_init, q=int(x[1] * 100), axis=0)[-1]
-    logging.info('eps after calibration step = {}'.format(g.eps))
-    np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [g.eps])
+    eps = utils.define_eps(S_init, x[1])
+    logging.info('eps after calibration2 step = {}'.format(eps))
+    np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [eps])
     np.savez(os.path.join(g.path['calibration'], 'calibration2.npz'),
              C=S_init[:, :N_params], sumstat=S_init[:, N_params:-1], dist=S_init[:, -1])
 

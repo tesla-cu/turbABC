@@ -4,8 +4,8 @@ import os
 from scipy.integrate import odeint
 from time import time
 
-import rans_ode as rans
-from sumstat import calc_sum_stat
+import rans_ode.ode as rans
+from rans_ode.sumstat import calc_sum_stat
 import pyabc.glob_var as g
 import pyabc.distance as dist
 from pyabc.utils import take_safe_log10
@@ -78,8 +78,10 @@ def abc_work_function_periodic(c):
     tspan = np.linspace(0, 50/s0, 500)
     sum_stat = []
     for i in range(5):
-        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta[i]), atol=1e-8, mxstep=200)
-        sum_stat = np.hstack((sum_stat, calc_sum_stat(s0 * tspan, take_safe_log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0])))
+        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta[i], StrainTensor.periodic_strain),
+                      atol=1e-8, mxstep=200)
+        ss_new = calc_sum_stat(s0 * tspan, take_safe_log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0])
+        sum_stat = np.hstack((sum_stat, ss_new))
     err = calc_err(sum_stat, g.Truth.sumstat_true)
     result = np.hstack((c, err)).tolist()
     time2 = time()
@@ -90,7 +92,7 @@ def abc_work_function_periodic(c):
 def abc_work_function_decay(c):
 
     u0 = [1, 1, 0.36, -0.08, -0.28, 0, 0, 0]
-    tspan = np.linspace(0, 45, 200)
+    tspan = np.linspace(0, 0.3, 200)
     Ynke = odeint(rans.rans_decay, u0, tspan, args=(c, ), atol=1e-8, mxstep=200)
     sum_stat1 = calc_sum_stat(tspan, Ynke[:, 2], g.Truth.decay_a11[:, 0])
     sum_stat2 = calc_sum_stat(tspan, Ynke[:, 3], g.Truth.decay_a22[:, 0])
@@ -105,12 +107,13 @@ def abc_work_function_strain_relax(c):
 
     u0 = [1, 1, 0.36, -0.08, -0.28, 0, 0, 0]
     # strain-relaxation
-    tspan = np.linspace(0, 0.95, 500)
-    Ynke = odeint(rans.rans_strain_relax, u0, tspan, args=(c, ), atol=1e-8, mxstep=200)
+    tspan = np.linspace(0.0775, 0.953, 500)
+    Ynke = odeint(rans.rans_strain_relax, u0, tspan, args=(c, g.Strain.strain_relax), atol=1e-8, mxstep=200)
     sum_stat = calc_sum_stat(tspan, Ynke[:, 2], g.Truth.strain_relax_a11[:, 0])
     err = calc_err(sum_stat, g.Truth.sumstat_true)
     result = np.hstack((c, sum_stat, err)).tolist()
     return result
+
 
 ########################################################################################################################
 #

@@ -7,27 +7,28 @@ sys.path.append('/Users/olgadorr/Research/ABC_RANS')
 import pyabc.parallel as parallel
 import pyabc.abc_alg as abc_alg
 import pyabc.glob_var as g
+import postprocess.postproc_abc as postproc_abc
 import sumstat
 from workfunc_rans import StrainTensor
 
 
 def main():
 
-    # Initialization
+    # # Initialization
     if len(sys.argv) > 1:
         input_path = sys.argv[1]
     else:
-        input_path = os.path.join('./', 'rans_ode.yml')
+        input_path = os.path.join('./', 'params.yml')
     input = yaml.load(open(input_path, 'r'))
 
     ### Paths
     g.path = input['path']
     if not os.path.isdir(g.path['output']):
         os.makedirs(g.path['output'])
-    g.path['calibration'] = os.path.join(g.path['output'], 'calibration')
-    if not os.path.isdir(g.path['calibration']):
-        os.makedirs(g.path['calibration'])
-
+    if input['abc_algorithm'] == 'abc_IMCMC':
+        g.path['calibration'] = os.path.join(g.path['output'], 'calibration')
+        if not os.path.isdir(g.path['calibration']):
+            os.makedirs(g.path['calibration'])
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(g.path['output'], 'ABC_log')), logging.StreamHandler()],
@@ -59,6 +60,7 @@ def main():
         g.N_per_chain = algorithm_input['N_per_chain']
         g.t0 = algorithm_input['t0']
         abc_alg.mcmc_chains(n_chains=g.par_process.proc)
+        ################################################################################################################
     elif input['abc_algorithm'] == 'abc_MCMC_adaptive':
         logging.info("ABC-MCMC algorithm with adaptation")
         logging.info('Chains')
@@ -72,7 +74,8 @@ def main():
     else:
         logging.warning('{} algorithm does not exist'.format(input['abc_algorithm']))
     ####################################################################################################################
-    # postprocess.main()
+    if input['abc_algorithm'] == 'abc':
+        postproc_abc.main(sys.argv)
 
 
 if __name__ == '__main__':
