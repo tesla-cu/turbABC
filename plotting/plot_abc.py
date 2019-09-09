@@ -12,9 +12,11 @@ import plot_compare_truth
 
 
 def main():
-    basefolder = '../rans_ode'
+    basefolder = '../runs_abc/'
 
     path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots')}
+    if not os.path.isdir(path['plots']):
+        os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
     num_bin_kde = 20
@@ -23,10 +25,12 @@ def main():
     folders = [os.path.join(path['output'], i) for i in folders_abc]
     print("Plot comparison with true data and kde 2D marginals")
     for folder in folders:
+        print(folder)
         plot_folder = os.path.join(folder, 'plots/')
         if not os.path.isdir(plot_folder):
             os.makedirs(plot_folder)
         c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
+        print(c)
         plot_compare_truth.plot_impulsive(c, plot_folder)
         plot_compare_truth.plot_periodic(c, plot_folder)
         plot_compare_truth.plot_decay(c, plot_folder)
@@ -34,7 +38,7 @@ def main():
         plotting.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
     ###################################################################################################################
     print("Plot change of marginal pdfs for different epsilon")
-    plotting.plot_marginal_change(folders, params_names, C_limits, path['plots'])
+    plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, path['plots'])
     plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
     plotting.plot_eps_change(folders, path['plots'])
     ###################################################################################################################

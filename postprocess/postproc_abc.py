@@ -16,13 +16,14 @@ def main(args):
     if len(args) > 1:
         input_path = args[1]
     else:
-        input_path = os.path.join('../rans_ode', 'params.yml')
+        input_path = os.path.join('../runs_abc/', 'params.yml')
 
     input = yaml.load(open(input_path, 'r'))
 
     ### Paths
     path = input['path']
-
+    # path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
+    print(path)
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess')), logging.StreamHandler()],
@@ -71,7 +72,7 @@ def main(args):
 
         for q in [0.05, 0.1, 0.25]:
             pp.marginal_confidence(N_params, folder, q)
-
+            pp.marginal_confidence_joint(abc_accepted, folder, q)
     ####################################################################################################################
     #
     ####################################################################################################################

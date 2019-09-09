@@ -13,7 +13,7 @@ class TruthData(object):
             self.shear_k = np.loadtxt(os.path.join(valid_folder, 'shear_k.txt'))
             self.plane_k = np.loadtxt(os.path.join(valid_folder, 'plane_k.txt'))
             self.plane_a11 = np.loadtxt(os.path.join(valid_folder, 'plane_b.txt'))
-            self.plane_a22 = np.loadtxt(os.path.join(valid_folder, 'plane_b.txt'))
+            self.plane_a22 = np.loadtxt(os.path.join(valid_folder, 'plane_b22.txt'))
             self.sumstat_true = np.hstack((self.axi_exp_k[:, 1], self.axi_con_k[:, 1],
                                            self.shear_k[:, 1], self.plane_k[:, 1]))
             # self.sumstat_true_a = np.hstack((2*self.axi_exp_b[:, 1], 2*self.axi_con_b[:, 1], 2*self.plane_b[:, 1]))

@@ -45,7 +45,7 @@ plt.rcParams['axes.linewidth'] = 1
 folder = './plots/'
 
 
-def plot_marginal_change(data_folders, params_names, C_limits, plot_folder):
+def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder):
 
     N_params = len(params_names)
     colormap = plt.cm.gist_ncar
@@ -56,10 +56,15 @@ def plot_marginal_change(data_folders, params_names, C_limits, plot_folder):
         x = os.path.basename(os.path.normpath(folder))[2:]
         eps = np.round(np.loadtxt(os.path.join(folder, 'eps')), 3)
         # labels.append('x = {}\%, eps = {}'.format(x, eps))
+        MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
+        MAP_x = MAP_x.reshape((-1, N_params))
         labels.append('x = {}\%'.format(x))
         for i in range(N_params):
             data_marg = np.loadtxt(os.path.join(folder, 'marginal_smooth{}'.format(i)))
-            axarr[i].plot(data_marg[0], data_marg[1])
+            for map in MAP_x:
+                MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
+                axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
+            axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
             axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
             axarr[i].set_xlabel(params_names[i])
             axarr[i].set_xlim(C_limits[i])
@@ -86,32 +91,52 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
     colormap = plt.cm.gist_ncar
     plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.7 * fig_height))
-    MAP = np.empty((len(data_folders), N_params))
-    confidence = np.empty((len(data_folders), N_params, 2))
+    MAP = []
+    # np.empty((len(data_folders), N_params))
+    conf_level = [0.05, 0.1, 0.25]
+    confidence = np.empty((len(data_folders), N_params, len(conf_level), 2))
+    quantile = np.empty_like(confidence)
+
     x = np.empty(len(data_folders))
     for i, folder in enumerate(data_folders):
         x[i] = float(os.path.basename(os.path.normpath(folder))[2:])
-        MAP[i] = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
-        confidence[i] = np.loadtxt(os.path.join(folder, 'confidence'))
+        print('x = ', x[i])
+        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde))))
+        for j, level in enumerate(conf_level):
+            confidence[i, :, j] = np.loadtxt(os.path.join(folder, 'confidence_{}'.format(int(100*(1-level)))))
+            quantile[i, :, j] = np.loadtxt(os.path.join(folder, 'quantile_{}'.format(int(100*(1-level)))))
     ind = np.argsort(x)
     x = x[ind]
-    MAP = MAP[ind]
+    MAP = np.array(MAP)[ind]
     confidence = confidence[ind]
+    quantile = quantile[ind]
+    colors = ['b', 'g', 'y']
+    colors2 = ['orange', 'k', 'magenta']
     for i in range(N_params):
-        axarr[i].plot(MAP[:, i], x, '-o', color='r')
-        axarr[i].plot(confidence[:, i, 0], x, color='b')
-        axarr[i].plot(confidence[:, i, 1], x, color='b')
+        for j in range(len(x)):
+            MAP[j] = MAP[j].reshape((-1, N_params))
+            for k in range(MAP[j].shape[0]):
+                axarr[i].scatter(MAP[j][k, i], x[j], s=10, color='r', zorder=2)
+        for j in range(len(conf_level)):
+            axarr[i].semilogy(confidence[:, i, j,  0], x, color=colors[j])
+            axarr[i].semilogy(confidence[:, i, j, 1], x, color=colors[j])
+            axarr[i].semilogy(quantile[:, i, j,  0], x, color=colors2[j])
+            axarr[i].semilogy(quantile[:, i, j, 1], x, color=colors2[j])
         axarr[i].set_xlabel(params_names[i])
         axarr[i].set_xlim(C_limits[i])
 
     axarr[0].set_ylabel('x [\%]')
-    fig.subplots_adjust(left=0.1, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
+    fig.subplots_adjust(left=0.12, right=0.98, wspace=0.1, hspace=0.1, bottom=0.2, top=0.8)
 
-    custom_lines = [Line2D([0], [0], marker='o', color='r', lw=1),
-                    Line2D([0], [0], color='b', linestyle='-', lw=1)]
-    axarr[1].legend(custom_lines, ['MAP', '95\% confidence'], loc='upper center',
-                       bbox_to_anchor=[0.5, 1.3], frameon=False,
-                       fancybox=False, shadow=False, ncol=3)
+    custom_lines = [Line2D([0], [0], marker='o', color='r', lw=1)]
+    legend_text = ['MAP']
+    for j, level in enumerate(conf_level):
+        custom_lines.append(Line2D([0], [0], color=colors[j], linestyle='-', lw=1))
+        legend_text.append('{}\% confidence'.format(int(100*(1-level))))
+    axarr[1].legend(custom_lines, legend_text, loc='upper center',
+                    bbox_to_anchor=[0.7, 1.35], frameon=False,
+                    labelspacing=0.0, handletextpad=0.5, handlelength=1.5,
+                    fancybox=False, shadow=False, ncol=2)
 
     fig.savefig(os.path.join(plot_folder, 'MAP_change'))
     plt.close('all')
@@ -155,7 +180,7 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
     cmaplist[0] = 'white' # force the first color entry to be white
     cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
 
-    confidence = np.loadtxt(os.path.join(data_folder, 'confidence'))
+    confidence = np.loadtxt(os.path.join(data_folder, 'confidence_75'))
     fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
     for i in range(N_params):
         for j in range(N_params):
@@ -164,13 +189,13 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1])
                 c_final_smooth = np.loadtxt(os.path.join(data_folder, 'C_final_smooth{}'.format(num_bin_joint)))
-                ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$90\%$ interval')
+                ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$75\%$ interval')
                 ax.axvline(confidence[i, 1], linestyle='--', color='b')
                 if len(c_final_smooth.shape) == 1:
                     ax.axvline(c_final_smooth[i], linestyle='--', color='r', label='max of joint pdf')
                 elif len(c_final_smooth) < 4:
                     for C in c_final_smooth:
-                        ax.axvline(C[i], linestyle='--', color='b', label='joint max')
+                        ax.axvline(C[i], linestyle='--', color='r', label='joint max')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
 
                 # if i == 0:
@@ -189,15 +214,15 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
                 # ax.tick_params(axis='both', which='minor', direction='in')
                 ax.tick_params(axis='both', which='major', pad=0.8)
                 ax.set_xlabel(params_names[i], labelpad=2)
-                if i == 0:
-                    ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
-                    textstr = '\n'.join((
-                        r'$C_1=%.3f$' % (c_final_smooth[0],),
-                        r'$C_2=%.3f$' % (c_final_smooth[1],),
-                        r'$C_{\epsilon1}=%.3f$' % (c_final_smooth[2],),
-                        r'$C_{\epsilon2}=%.3f$' % (c_final_smooth[3],)))
-                    ax.text(0.15, -1.6, textstr, transform=ax.transAxes, fontsize=12,
-                            verticalalignment='top', linespacing=1.5)
+                # if i == 0:
+                #     ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
+                #     textstr = '\n'.join((
+                #         r'$C_1=%.3f$' % (c_final_smooth[0],),
+                #         r'$C_2=%.3f$' % (c_final_smooth[1],),
+                #         r'$C_{\epsilon1}=%.3f$' % (c_final_smooth[2],),
+                #         r'$C_{\epsilon2}=%.3f$' % (c_final_smooth[3],)))
+                #     ax.text(0.15, -1.6, textstr, transform=ax.transAxes, fontsize=12,
+                #             verticalalignment='top', linespacing=1.5)
             elif i < j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])

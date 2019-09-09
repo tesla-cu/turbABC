@@ -74,7 +74,19 @@ def marginal_confidence(N_params, path, level):
             cdf[j] = np.sum(y[:j+1]*dx)
         confidence[i, 0] = np.interp([level], cdf, x)
         confidence[i, 1] = np.interp([1-level], cdf, x)
-    np.savetxt(os.path.join(path, 'confidence_{}'.format(level)), confidence)
+    np.savetxt(os.path.join(path, 'confidence_{}'.format(int(100*(1-level)))), confidence)
+
+
+def marginal_confidence_joint(accepted, path, level):
+
+    N_params = len(accepted[0])
+    confidence = np.zeros((N_params, 2))
+    for i in range(N_params):
+        # accepted_tmp = np.sort(accepted[:, i])
+        accepted_tmp = accepted[:, i]
+        confidence[i, 0] = np.percentile(accepted_tmp, int(100*level))
+        confidence[i, 1] = np.percentile(accepted_tmp, int(100*(1-level)))
+    np.savetxt(os.path.join(path, 'quantile_{}'.format(int((1-level)*100))), confidence)
 
 
 # def bootstrapping(Z, C_final, C_limits, n_sample):
