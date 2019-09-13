@@ -58,7 +58,9 @@ def calibration(algorithm_input, C_limits):
     logging.debug('After Calibration 1: Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
 
     # Define epsilon
-    eps = utils.define_eps(S_init, x[0], N_params, id=1)
+
+    eps = utils.define_eps(S_init, x[0])
+    S_init = np.array(S_init)
     logging.info('eps after calibration1 step = {}'.format(eps))
     np.savetxt(os.path.join(g.path['calibration'], 'eps1'), [eps])
     np.savez(os.path.join(g.path['calibration'], 'calibration1.npz'),
@@ -85,9 +87,10 @@ def calibration(algorithm_input, C_limits):
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 2')
 
     # Define epsilon again
-    eps = utils.define_eps(S_init, x[1])
-    logging.info('eps after calibration2 step = {}'.format(eps))
-    np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [eps])
+    g.eps = utils.define_eps(S_init, x[1])
+    S_init = np.array(S_init)
+    logging.info('eps after calibration2 step = {}'.format(g.eps))
+    np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [g.eps])
     np.savez(os.path.join(g.path['calibration'], 'calibration2.npz'),
              C=S_init[:, :N_params], sumstat=S_init[:, N_params:-1], dist=S_init[:, -1])
 

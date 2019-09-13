@@ -54,8 +54,6 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
     for folder in data_folders:
         x = os.path.basename(os.path.normpath(folder))[2:]
-        eps = np.round(np.loadtxt(os.path.join(folder, 'eps')), 3)
-        # labels.append('x = {}\%, eps = {}'.format(x, eps))
         MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
         MAP_x = MAP_x.reshape((-1, N_params))
         labels.append('x = {}\%'.format(x))
@@ -67,7 +65,7 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
             axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
             axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
             axarr[i].set_xlabel(params_names[i])
-            axarr[i].set_xlim(C_limits[i])
+            # axarr[i].set_xlim(C_limits[i])
     fig.subplots_adjust(left=0.05, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
 
     plt.legend(labels, ncol=3, loc='upper center',
@@ -105,9 +103,11 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
         for j, level in enumerate(conf_level):
             confidence[i, :, j] = np.loadtxt(os.path.join(folder, 'confidence_{}'.format(int(100*(1-level)))))
             quantile[i, :, j] = np.loadtxt(os.path.join(folder, 'quantile_{}'.format(int(100*(1-level)))))
+    print(MAP)
     ind = np.argsort(x)
     x = x[ind]
     MAP = np.array(MAP)[ind]
+    print(MAP)
     confidence = confidence[ind]
     quantile = quantile[ind]
     colors = ['b', 'g', 'y']
@@ -115,6 +115,7 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
     for i in range(N_params):
         for j in range(len(x)):
             MAP[j] = MAP[j].reshape((-1, N_params))
+            print(MAP[j].shape)
             for k in range(MAP[j].shape[0]):
                 axarr[i].scatter(MAP[j][k, i], x[j], s=10, color='r', zorder=2)
         for j in range(len(conf_level)):

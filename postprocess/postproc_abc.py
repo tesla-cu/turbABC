@@ -21,17 +21,16 @@ def main(args):
     input = yaml.load(open(input_path, 'r'))
 
     ### Paths
-    path = input['path']
-    # path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
+    # path = input['path']
+    path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
     print(path)
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
-        handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess')), logging.StreamHandler()],
+        handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess0005')), logging.StreamHandler()],
         level=logging.DEBUG)
 
     logging.info('\n############# POSTPROCESSING ############')
-    logging.info('\n############# Classic ABC ############')
-    x_list = [0.01, 0.03, 0.05, 0.1, 0.3, 0.5]
+    x_list = [0.005, 0.01, 0.03, 0.05, 0.1, 0.3]
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     N_params = len(C_limits)
     files_abc = glob.glob1(path['output'], "classic_abc*.npz")
@@ -46,11 +45,13 @@ def main(args):
         sum_stat = np.vstack((sum_stat, np.load(file)['sumstat']))
         dist = np.vstack((dist, np.load(file)['dist'].reshape((-1, 1))))
     data = np.hstack((accepted, dist)).tolist()
+    logging.info('\n############# Classic ABC ############')
     for x in x_list:
         logging.info('\n')
-        folder = os.path.join(path['output'], 'x_{}'.format(int(x*100)))
+        folder = os.path.join(path['output'], 'x_{}'.format(x * 100))
         if not os.path.isdir(folder):
             os.makedirs(folder)
+        print('min dist = ', np.min(dist))
         eps = define_eps(data, x)
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         abc_accepted = accepted[np.where(dist < eps)[0]]
@@ -58,29 +59,29 @@ def main(args):
         num_bin_kde = 20
         num_bin_raw = 20
         ##############################################################################
-        logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
-        H, C_final_joint = pp.calc_raw_joint_pdf(abc_accepted, num_bin_raw, C_limits)
-        np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
-        pp.calc_marginal_pdf_raw(abc_accepted, num_bin_raw, C_limits, folder)
-        ##############################################################################
-        logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
-        np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
-        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
-        np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
-        pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
+        # logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
+        # H, C_final_joint = pp.calc_raw_joint_pdf(abc_accepted, num_bin_raw, C_limits)
+        # np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
+        # pp.calc_marginal_pdf_raw(abc_accepted, num_bin_raw, C_limits, folder)
+        # ##############################################################################
+        # logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
+        # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+        # np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
+        # logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
+        # np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
+        # pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
 
         for q in [0.05, 0.1, 0.25]:
             pp.marginal_confidence(N_params, folder, q)
             pp.marginal_confidence_joint(abc_accepted, folder, q)
     ####################################################################################################################
     #
-    ####################################################################################################################
+    # ####################################################################################################################
     logging.info('\n############# Regression ############')
     path['regression_dist'] = os.path.join(path['output'], 'regression_dist')
+    path['regression_full'] = os.path.join(path['output'], 'regression_full')
     if not os.path.isdir(path['regression_dist']):
         os.makedirs(path['regression_dist'])
-    path['regression_full'] = os.path.join(path['output'], 'regression_full')
     if not os.path.isdir(path['regression_full']):
         os.makedirs(path['regression_full'])
     Truth = sumstat.TruthData(valid_folder=path['valid_data'], case=input['case'])
@@ -96,7 +97,7 @@ def main(args):
         dist_reg = dist[:n, -1].reshape((-1, 1))
         ##########################################################################
         logging.info('Regression with distance')
-        folder = os.path.join(path['regression_dist'], 'x_{}'.format(int(x*100)))
+        folder = os.path.join(path['regression_dist'], 'x_{}'.format(x*100))
         if not os.path.isdir(folder):
             os.makedirs(folder)
         # delta = np.max(dist)

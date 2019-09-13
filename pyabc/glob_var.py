@@ -4,6 +4,7 @@ TINY = 10e-8
 
 path = None
 C_limits = None
+eps = 0.0
 std = 0.0
 t0 = 0
 par_process = None  # empty global variable to fill with parallel class in main_rans.py

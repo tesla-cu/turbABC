@@ -1,8 +1,7 @@
 import numpy as np
 import logging
 import itertools
-from scipy.stats import gaussian_kde
-from time import time
+
 import pyabc.glob_var as g
 
 
@@ -32,7 +31,7 @@ def define_eps(array, x):
 
     array.sort(key=lambda y: y[-1])
     array = np.array(array)
-    eps = np.percentile(array, q=int(x * 100), axis=0)[-1]
+    eps = np.percentile(array, q=x*100, axis=0)[-1]
     return eps
 
 
@@ -88,61 +87,3 @@ def covariance_recursive(x, t, cov_prev, mean_prev):
     return cov, mean_new
 
 
-def gaussian_kde_scipy(data, a, b, num_bin_joint):
-
-    dim = len(a)
-    logging.info('Gaussian KDE {} dimensions with {} bins per dimension'.format(dim, num_bin_joint))
-    C_map = []
-    # print(dim, data.shape, a, b)
-    data_std = np.std(data, axis=0)
-    kde = gaussian_kde(data.T, bw_method='scott')
-    f = kde.covariance_factor()
-    # bw = f * data_std
-    # print('Scott: f, bw = ', f, bw)
-    # kde = gaussian_kde(data.T, bw_method='silverman')
-    # f = kde.covariance_factor()
-    # bw = f * data_std
-    # print('Silverman: f, bw = ', f, bw)
-    # kde.set_bandwidth(bw_method=kde.factor / 4.)
-    # f = kde.covariance_factor()
-    # bw = f * data_std
-    # print('f, bw = ', f, bw)
-
-    time1 = time()
-    # # evaluate on a regular grid
-    xgrid = np.linspace(a[0], b[0], num_bin_joint + 1)
-    if dim == 1:
-        Z = kde.evaluate(xgrid)
-        Z = Z.reshape(xgrid.shape)
-        ind = np.argwhere(Z == np.max(Z))
-        for i in ind:
-            C_map.append(xgrid[i])
-    elif dim == 2:
-        ygrid = np.linspace(a[1], b[1], num_bin_joint + 1)
-        Xgrid, Ygrid = np.meshgrid(xgrid, ygrid, indexing='ij')
-        Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel()]))
-        Z = Z.reshape(Xgrid.shape)
-    elif dim == 3:
-        ygrid = np.linspace(a[1], b[1], num_bin_joint + 1)
-        zgrid = np.linspace(a[2], b[2], num_bin_joint + 1)
-        Xgrid, Ygrid, Zgrid = np.meshgrid(xgrid, ygrid, zgrid, indexing='ij')
-        Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel(), Zgrid.ravel()]))
-        Z = Z.reshape(Xgrid.shape)
-        ind = np.argwhere(Z == np.max(Z))
-        for i in ind:
-            C_map.append([xgrid[i[0]], ygrid[i[1]], zgrid[i[2]]])
-    elif dim == 4:
-        ygrid = np.linspace(a[1], b[1], num_bin_joint + 1)
-        zgrid = np.linspace(a[2], b[2], num_bin_joint + 1)
-        z4grid = np.linspace(a[3], b[3], num_bin_joint + 1)
-        Xgrid, Ygrid, Zgrid, Z4grid = np.meshgrid(xgrid, ygrid, zgrid, z4grid, indexing='ij')
-        Z = kde.evaluate(np.vstack([Xgrid.ravel(), Ygrid.ravel(), Zgrid.ravel(), Z4grid.ravel()]))
-        Z = Z.reshape(Xgrid.shape)
-        ind = np.argwhere(Z == np.max(Z))
-        for i in ind:
-            C_map.append([xgrid[i[0]], ygrid[i[1]], zgrid[i[2]], z4grid[i[3]]])
-    else:
-        print("gaussian_kde_scipy: Wrong number of dimensions (dim)")
-    time2 = time()
-    timer(time1, time2, "Time for gaussian_kde_scipy")
-    return Z, C_map

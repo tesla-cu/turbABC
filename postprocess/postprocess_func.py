@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import os
-from pyabc.utils import gaussian_kde_scipy
+from pyabc.kde import gaussian_kde_scipy
 from pyabc.utils import pdf_from_array_with_x, define_eps
 
 
@@ -38,6 +38,7 @@ def calc_marginal_pdf_smooth(Z, num_bin_joint, C_limits, data_folder):
             if i == j:
                 y = np.sum(Z, axis=tuple(np.where(np.arange(N_params) != i)[0]))
                 x = np.linspace(C_limits[i, 0], C_limits[i, 1], num_bin_joint + 1)
+                y = y/np.sum(y)
                 np.savetxt(os.path.join(data_folder, 'marginal_smooth{}'.format(i)), [x, y])
             elif i < j:
                 # Smooth

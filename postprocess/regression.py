@@ -36,8 +36,9 @@ def local_linear_regression(samples, sumstat_dif, dist, delta):
 
     N_samples = samples.shape[0]
     X = np.hstack((np.ones((N_samples, 1)), sumstat_dif))
-    W = np.diag(epanechnikov_kernel(dist, delta))
-    solution = np.linalg.inv(X.T @ W @ X)@X.T@W@samples
+    W_1d = epanechnikov_kernel(dist, delta)
+    X_T_W = X.T*W_1d
+    solution = np.linalg.inv(X_T_W @ X)@X_T_W@samples
     # alpha = solution[0]
     beta = solution[1:]
     new_samples = samples - sumstat_dif @ beta
@@ -49,6 +50,7 @@ def regression_dist(samples, dist, x):
     data = np.hstack((samples, dist)).tolist()
     delta = define_eps(data, x)
     del data
+
     new_samples = local_linear_regression_dist(samples, dist, delta)
     return new_samples
 

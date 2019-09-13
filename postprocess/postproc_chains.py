@@ -22,15 +22,15 @@ def main(args):
 
     ### Paths
     path = input['path']
+    path['calibration'] = os.path.join(path['output'], 'calibration/')
     N_chains = input['parallel_threads']
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess')), logging.StreamHandler()],
         level=logging.DEBUG)
 
-    logging.info('\n############# POSTPROCESSING ############')
-    logging.info('\n############# MCMC-ABC ({} chains) ############'.format(N_chains))
-    C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits'))
+    logging.info('\n############# POSTPROCESSING CHAINS ############')
+    C_limits = np.loadtxt(os.path.join(path['calibration'], 'C_limits'))
     N_params = len(C_limits)
     files = np.empty(0)
     for chain in range(N_chains):
@@ -46,7 +46,9 @@ def main(args):
         sum_stat = np.vstack((sum_stat, np.load(file)['sumstat']))
         dist = np.vstack((dist, np.load(file)['dist'].reshape((-1, 1))))
     # data = np.hstack((accepted, dist)).tolist()
+    print(accepted.shape, sum_stat.shape, dist.shape)
     logging.info('\n')
+    logging.info('\n############# MCMC-ABC ({} chains) ############'.format(N_chains))
     folder = os.path.join(path['output'], 'chains')
     if not os.path.isdir(folder):
         os.makedirs(folder)
@@ -67,6 +69,7 @@ def main(args):
 
     for q in [0.05, 0.1, 0.25]:
         pp.marginal_confidence(N_params, folder, q)
+        pp.marginal_confidence_joint(accepted, folder, q)
     ####################################################################################################################
     #
     ####################################################################################################################
@@ -115,6 +118,7 @@ def main(args):
         pp.calc_marginal_pdf_smooth(Z, num_bin_kde_reg, limits, folder)
         for q in [0.05, 0.1, 0.25]:
             pp.marginal_confidence(N_params, folder, q)
+            pp.marginal_confidence_joint(new_samples, folder, q)
         ##########################################################################
         logging.info('Regression with full summary statistics')
         folder = os.path.join(path['regression_full'], 'x_{}'.format(int(x*100)))
@@ -140,6 +144,7 @@ def main(args):
         pp.calc_marginal_pdf_smooth(Z, num_bin_kde_reg, limits, folder)
         for q in [0.05, 0.1, 0.25]:
             pp.marginal_confidence(N_params, folder, q)
+            pp.marginal_confidence_joint(new_samples, folder, q)
     logging.info('\n#############Done############')
 
 
