@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('pdf')
 import matplotlib.pyplot as plt
+from cycler import cycler
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 import matplotlib.colors as colors
@@ -43,6 +44,46 @@ mpl.rcParams['legend.frameon'] = False
 plt.rcParams['axes.linewidth'] = 1
 
 folder = './plots/'
+
+
+def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder):
+
+    # colormap = plt.cm.gist_ncar
+
+    labels = []
+    fig = plt.figure(figsize=(0.65*fig_width, 0.7*fig_height))
+    ax = plt.gca()
+    colors = ['r', 'g', 'b', 'y', 'm']
+    # ax.set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    for f, folder in enumerate(data_folders):
+        x = os.path.basename(os.path.normpath(folder))[2:]
+        MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth'))
+        labels.append('x = {}\%'.format(x))
+        pdf = np.load(os.path.join(folder, 'Z.npz'))['Z']
+        pdf_x = np.load(os.path.join(folder, 'Z.npz'))['grid']
+        MAP_y = np.interp(MAP_x, pdf_x, pdf)
+        ax.scatter(MAP_x, MAP_y, color='r', s=10, zorder=2)
+        ax.plot(pdf_x, pdf, color=colors[f], zorder=1)
+        # axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
+        ax.set_xlabel(params_names[0])
+        ax.set_xlim(C_limits)
+    fig.subplots_adjust(left=0.15, right=0.92, bottom=0.2, top=0.92)
+
+    plt.legend(labels, ncol=1, loc='upper center',
+               bbox_to_anchor=[0.2, 0.9], labelspacing=0.0,
+               handletextpad=0.5, handlelength=1.5,
+               fancybox=True, shadow=True)
+
+    # custom_lines = [Line2D([0], [0], color=colors[0], lw=1),
+    #                 Line2D([0], [0], color=colors[1], linestyle='-', lw=1),
+    #                 Line2D([0], [0], color=colors[2], linestyle='-', lw=1)]
+    # axarr[0, 1].legend(custom_lines, ['true data', '3 parameters', '4 parameters'], loc='upper center',
+    #                    bbox_to_anchor=(0.99, 1.35), frameon=False,
+    #                    fancybox=False, shadow=False, ncol=3)
+
+    fig.savefig(os.path.join(plot_folder, 'marginal_change'))
+    plt.close('all')
+
 
 
 def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder):
@@ -447,29 +488,19 @@ def plot_prior(params_names, C_limits, data_folder, plot_folder):
     plt.close('all')
 
 
-def main():
-    basefolder = './'
+def plot_1d_dist_scatter(data, C_limits, params_name, x_list, eps_list, plot_folder):
 
-    path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots/')}
-    path['calibration'] = os.path.join(path['output'], 'calibration/')
-    if not os.path.isdir(path['plots']):
-        os.makedirs(path['plots'])
-
-    C_limits = np.loadtxt(os.path.join(path['calibration'], 'C_limits'))
-    params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
-
-    plot_prior(params_names, C_limits, path['calibration'], path['plots'])
-    # plot_marginal_smooth_pdf(path, C_limits)
-    # s0 = 3.3
-    # beta = [0.125, 0.25, 0.5, 0.75, 1]
-    # ####################################################################################################################
-    # plot_marginal_pdf(path, C_limits)
-    # plot_marginal_smooth_pdf(path, C_limits)
-    #
-    # c = np.loadtxt(os.path.join(path['output'], 'C_final_smooth'))
-    # print('C_final_smooth: ', c)
-    # err = np.zeros(13)
-
-
-if __name__ == '__main__':
-    main()
+    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    ax = plt.axes()
+    colors = ['r', 'g', 'k', 'y', 'm' ]
+    ax.axis(xmin=C_limits[0], xmax=C_limits[1], ymax=1.005 * np.max(eps_list), ymin=0.98 * np.min(eps_list))
+    ax.scatter(data[:, 0], data[:, 1], marker=".", color='blue')
+    for i, eps in enumerate(eps_list):
+        ax.axhline(eps, color=colors[i], label='{}\%'.format(x_list[i][2:]))
+    ax.set_xlabel(params_name)
+    ax.set_ylabel('distance')
+    # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.1))
+    plt.legend()
+    fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
+    fig.savefig(os.path.join(plot_folder, 'scatter_plot'))
+    plt.close('all')

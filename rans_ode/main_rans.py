@@ -41,15 +41,20 @@ def main():
     g.Strain = StrainTensor(valid_folder=g.path['valid_data'])
     g.case = input['case']
     C_limits = np.array(input['C_limits'])
+    C_nominal = input['C_nominal']
     ####################################################################################
     # Run
     ####################################################################################
     g.par_process = parallel.Parallel(1, input['parallel_threads'])
-    logging.info('C_limits: [{}, {}, {}, {}]'.format(C_limits[0], C_limits[1], C_limits[2], C_limits[3]))
+    logging.info('C_limits: {}'.format(C_limits))
     np.savetxt(os.path.join(g.path['output'], 'C_limits_init'), C_limits)
     if input['abc_algorithm'] == 'abc':    # classical abc algorithm (accepts all samples for further postprocessing)
         logging.info("Classic ABC algorithm")
         C_array = abc_alg.sampling(algorithm_input['sampling'], C_limits, algorithm_input['N'])
+        if len(C_limits) < len(C_nominal):
+            logging.info('Using nominal values: {}'.format(C_nominal))
+            add = [C_nominal[len(C_limits):], ]*(algorithm_input['N']**len(C_limits))
+            C_array = np.hstack((C_array, add))
         abc_alg.abc_classic(C_array)
         ################################################################################################################
     elif input['abc_algorithm'] == 'abc_IMCMC':    # MCMC with calibration step (Wegmann 2009)
@@ -74,8 +79,8 @@ def main():
     else:
         logging.warning('{} algorithm does not exist'.format(input['abc_algorithm']))
     ####################################################################################################################
-    if input['abc_algorithm'] == 'abc':
-        postproc_abc.main(sys.argv)
+    # if input['abc_algorithm'] == 'abc':
+    #     postproc_abc.main(sys.argv)
 
 
 if __name__ == '__main__':
