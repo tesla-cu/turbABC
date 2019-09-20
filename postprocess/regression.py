@@ -12,18 +12,6 @@ def epanechnikov_kernel(dist, delta):
     return out.reshape((-1, ))
 
 
-def local_linear_regression_dist(samples, dist, delta):
-
-    N_samples, N_params = samples.shape
-    X = np.hstack((np.ones((N_samples, 1)), dist))
-    W = np.diag(epanechnikov_kernel(dist, delta))
-    solution = np.linalg.inv(X.T @ W @ X)@X.T@W@samples
-    print('solution = ', solution)
-    alpha = solution[0]
-    beta = solution[1:].reshape((-1, N_params))
-    new_samples = samples - dist @ beta
-    return new_samples
-
 
 def local_linear_regression(samples, sumstat_dif, dist, delta):
     """
@@ -33,32 +21,23 @@ def local_linear_regression(samples, sumstat_dif, dist, delta):
     :param delta: distance tolerance
     :return: array of new parameters of shape (N, N_params)
     """
-
     N_samples = samples.shape[0]
     X = np.hstack((np.ones((N_samples, 1)), sumstat_dif))
-    W_1d = epanechnikov_kernel(dist, delta)
+    # W_1d = epanechnikov_kernel(dist, delta)
+    W_1d = np.ones(len(dist))
     X_T_W = X.T*W_1d
     solution = np.linalg.inv(X_T_W @ X)@X_T_W@samples
+    print('solution = ', solution)
     # alpha = solution[0]
     beta = solution[1:]
     new_samples = samples - sumstat_dif @ beta
-    return new_samples
+    return new_samples, solution
 
 
-def regression_dist(samples, dist, x):
+def regression(samples, sum_stat_diff, dist, x):
 
-    data = np.hstack((samples, dist)).tolist()
-    delta = define_eps(data, x)
-    del data
-
-    new_samples = local_linear_regression_dist(samples, dist, delta)
-    return new_samples
-
-
-def regression_full(samples, sum_stat, dist, sumstat_true, x):
-
-    data = np.hstack((samples, dist)).tolist()
-    delta = define_eps(data, x)
-    del data
-    new_samples = local_linear_regression(samples, np.abs(sum_stat - sumstat_true), dist,  delta)
+    # data = np.hstack((samples, dist)).tolist()
+    # delta = define_eps(data, x)
+    # del data
+    new_samples = local_linear_regression(samples, sum_stat_diff, dist, 1)
     return new_samples

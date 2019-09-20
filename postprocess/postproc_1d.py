@@ -8,7 +8,7 @@ import postprocess.postprocess_func as pp
 from pyabc.utils import define_eps
 from pyabc.kde import gaussian_kde_scipy, kdepy_fftkde, grid_for_kde
 import rans_ode.sumstat as sumstat
-import postprocess.regression as regression
+from postprocess.regression import regression
 import pyabc.utils as utils
 
 
@@ -62,8 +62,9 @@ def main(args):
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         abc_accepted = accepted[np.where(dist < eps)[0]]
         logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, len(abc_accepted), len(dist)))
-        np.savetxt(os.path.join(path['output'], '1d_dist_scatter_{}'.format(x)),
-                   np.hstack((abc_accepted, dist[np.where(dist < eps)].reshape(-1, 1))))
+        print(sum_stat.shape, sum_stat[np.where(dist < eps)[0], :].shape)
+        np.savez(os.path.join(path['output'], '1d_dist_scatter_{}'.format(x)), C=abc_accepted,
+                 dist=dist[np.where(dist < eps)].reshape((-1, 1)), sumstat=sum_stat[np.where(dist < eps)[0], :])
         num_bin_kde = 100
         num_bin_raw = 20
         ##############################################################################
@@ -95,7 +96,7 @@ def main(args):
     if not os.path.isdir(path['regression_full']):
         os.makedirs(path['regression_full'])
     Truth = sumstat.TruthData(valid_folder=path['valid_data'], case=input['case'])
-    ind = np.argsort(accepted[:, -1])
+    ind = np.argsort(dist[:, 0])
     accepted = accepted[ind]
     sum_stat = sum_stat[ind]
     dist = dist[ind]
@@ -111,8 +112,14 @@ def main(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
         # delta = np.max(dist)
-        new_samples = regression.regression_dist(samples, dist_reg, x=1)
+        # new_samples = regression.regression_dist(samples, dist_reg, x=1)
+        for i in range(len(Truth.sumstat_true)):
+            print(i)
+            new_samples, solution = regression(samples, (sum_stat[:n, i] - Truth.sumstat_true[i]).reshape((-1, 1)),
+                                               dist_reg, x=1)
+            np.savetxt(os.path.join(folder, 'solution{}'.format(i)), solution)
         # new_samples = regression.regression(accepted, sum_stat, dist, Truth.sumstat_true, x=x)
+        new_samples, solution = regression(samples, dist_reg, dist_reg, x=1)
         limits = np.empty((N_params, 2))
         for i in range(N_params):
             limits[i, 0] = np.min(new_samples[:, i])
@@ -139,7 +146,7 @@ def main(args):
         folder = os.path.join(path['regression_full'], 'x_{}'.format(x*100))
         if not os.path.isdir(folder):
             os.makedirs(folder)
-        new_samples = regression.regression_full(samples, sum_stat[:n], dist_reg, Truth.sumstat_true, x=1)
+        new_samples, _ = regression(samples, sum_stat[:n] - Truth.sumstat_true, dist_reg, x=1)
         # new_samples = regression.regression(accepted, sum_stat, dist, Truth.sumstat_true, x=x)
         limits = np.empty((N_params, 2))
         for i in range(N_params):

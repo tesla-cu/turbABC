@@ -8,7 +8,7 @@ from cycler import cycler
 import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 import matplotlib.colors as colors
-
+from rans_ode.sumstat import TruthData
 # plt.style.use('dark_background')
 
 fig_width_pt = 1.5*246.0  # Get this from LaTeX using "The column width is: \the\columnwidth \\"
@@ -53,33 +53,24 @@ def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_f
     labels = []
     fig = plt.figure(figsize=(0.65*fig_width, 0.7*fig_height))
     ax = plt.gca()
-    colors = ['r', 'g', 'b', 'y', 'm']
+    colors = ['k', 'g', 'b', 'y', 'm']
     # ax.set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    x = []
     for f, folder in enumerate(data_folders):
-        x = os.path.basename(os.path.normpath(folder))[2:]
+        x.append(float(os.path.basename(os.path.normpath(folder))[2:]))
+    ind = np.argsort(x)
+    for f, folder in enumerate(np.array(data_folders)[ind]):
         MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth'))
-        labels.append('x = {}\%'.format(x))
+        # labels.append(int(float(x)))
         pdf = np.load(os.path.join(folder, 'Z.npz'))['Z']
         pdf_x = np.load(os.path.join(folder, 'Z.npz'))['grid']
         MAP_y = np.interp(MAP_x, pdf_x, pdf)
         ax.scatter(MAP_x, MAP_y, color='r', s=10, zorder=2)
-        ax.plot(pdf_x, pdf, color=colors[f], zorder=1)
-        # axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
-        ax.set_xlabel(params_names[0])
-        ax.set_xlim(C_limits)
+        ax.plot(pdf_x, pdf, color=colors[f], zorder=1, label='x={}\%'.format(x[ind[f]]))
+    ax.set_xlabel(params_names[0])
+    ax.set_xlim([1.2, 1.7])
     fig.subplots_adjust(left=0.15, right=0.92, bottom=0.2, top=0.92)
-
-    plt.legend(labels, ncol=1, loc='upper center',
-               bbox_to_anchor=[0.2, 0.9], labelspacing=0.0,
-               handletextpad=0.5, handlelength=1.5,
-               fancybox=True, shadow=True)
-
-    # custom_lines = [Line2D([0], [0], color=colors[0], lw=1),
-    #                 Line2D([0], [0], color=colors[1], linestyle='-', lw=1),
-    #                 Line2D([0], [0], color=colors[2], linestyle='-', lw=1)]
-    # axarr[0, 1].legend(custom_lines, ['true data', '3 parameters', '4 parameters'], loc='upper center',
-    #                    bbox_to_anchor=(0.99, 1.35), frameon=False,
-    #                    fancybox=False, shadow=False, ncol=3)
+    plt.legend(loc=0)
 
     fig.savefig(os.path.join(plot_folder, 'marginal_change'))
     plt.close('all')
@@ -518,16 +509,39 @@ def plot_sampling_hist(samples, C_limits, params_name, plot_folder):
     plt.close('all')
 
 
-def plot_regression(data, C_limits, params_name, plot_folder):
-    # [1.89779027]
-    x = np.linspace(C_limits[0], C_limits[1], 100)
-    y = -3.00431157*x+1.89779027
-    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
-    ax = plt.axes()
-    ax.scatter(data[:, 1], data[:, 0], marker=".", color='blue')
-    ax.plot(y, x)
-    ax.set_xlabel(params_name)
-    ax.set_title('regression')
-    fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
-    fig.savefig(os.path.join(plot_folder, 'regression'))
-    plt.close('all')
+def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
+    # dist [[ 1.59051902]
+    #  [-1.55951292]]
+    print(solution.shape)
+    true = TruthData(valid_folder='../rans_ode/valid_data/', case='impulsive')
+    full_true = true.sumstat_true
+    for i in range(len(full_true)):
+        new = sum_stat[:, i] - full_true[i]
+        x = np.linspace(np.min(new), np.max(new), 100)
+        print(solution[i])
+        print(full_true[4])
+        y = solution[i, 0]+solution[i, 1]*x
+        fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+        ax = plt.axes()
+        ax.scatter(new, c, marker=".", color='blue')
+        ax.axvline(0)
+        ax.plot(x, y, color='k')
+        ax.set_ylabel(params_name)
+        ax.set_xlabel(r'$\mathcal{S} - \mathcal{S}_{true}$')
+        ax.set_title('Linear regression')
+        fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.9)
+        fig.savefig(os.path.join(plot_folder, 'regression_full{}'.format(i)))
+
+
+    # y = -1.55951292*x+1.59051902
+    # fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    # ax = plt.axes()
+    # ax.scatter(dist, c, marker=".", color='blue')
+    # ax.axvline(0.0)
+    # ax.plot(y, x, color='k')
+    # ax.set_ylabel(params_name)
+    # ax.set_xlabel('distance')
+    # ax.set_title('regression distance')
+    # fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.9)
+    # fig.savefig(os.path.join(plot_folder, 'regression_dist'))
+    # plt.close('all')

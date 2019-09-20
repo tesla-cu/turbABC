@@ -92,7 +92,7 @@ def main(args):
     if not os.path.isdir(path['regression_full']):
         os.makedirs(path['regression_full'])
     Truth = sumstat.TruthData(valid_folder=path['valid_data'], case=input['case'])
-    ind = np.argsort(accepted[:, -1])
+    ind = np.argsort(dist)
     accepted = accepted[ind]
     sum_stat = sum_stat[ind]
     dist = dist[ind]

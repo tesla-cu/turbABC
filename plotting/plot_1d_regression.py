@@ -43,9 +43,11 @@ def main():
     print(eps_list)
     plotting.plot_1d_dist_scatter(data, C_limits, params_names[0], folders_abc, eps_list, path['plots'])
     plotting.plot_sampling_hist(data[:, 0], C_limits, params_names[0], path['plots'])
-    data_30 = np.loadtxt(os.path.join(path['output'], '1d_dist_scatter_0.3'))
-    print(data_30.shape)
-    plotting.plot_regression(data_30, C_limits, params_names[0], path['plots'])
+    data_10 = np.load(os.path.join(path['output'], '1d_dist_scatter_0.1.npz'))
+    solution = np.empty((data_10['sumstat'].shape[1], 2))
+    for i in range(data_10['sumstat'].shape[1]):
+        solution[i] = np.loadtxt(os.path.join(path['output'], 'regression_dist/x_10.0/solution{}'.format(i)))
+    plotting.plot_regression(data_10['C'],data_10['sumstat'], data_10['dist'], solution, params_names[0], path['plots'])
     # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
     # plotting.plot_eps_change(folders, path['plots'])
     ###################################################################################################################
