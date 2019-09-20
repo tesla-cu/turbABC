@@ -18,7 +18,7 @@ def main(args):
     if len(args) > 1:
         input_path = args[1]
     else:
-        input_path = os.path.join('../runs_abc/', 'params.yml')
+        input_path = os.path.join('../rans_ode', 'params.yml')
 
     input = yaml.load(open(input_path, 'r'))
 
@@ -62,6 +62,8 @@ def main(args):
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         abc_accepted = accepted[np.where(dist < eps)[0]]
         logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, len(abc_accepted), len(dist)))
+        np.savetxt(os.path.join(path['output'], '1d_dist_scatter_{}'.format(x)),
+                   np.hstack((abc_accepted, dist[np.where(dist < eps)].reshape(-1, 1))))
         num_bin_kde = 100
         num_bin_raw = 20
         ##############################################################################

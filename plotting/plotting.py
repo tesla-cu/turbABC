@@ -504,3 +504,30 @@ def plot_1d_dist_scatter(data, C_limits, params_name, x_list, eps_list, plot_fol
     fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
     fig.savefig(os.path.join(plot_folder, 'scatter_plot'))
     plt.close('all')
+
+
+def plot_sampling_hist(samples, C_limits, params_name, plot_folder):
+
+    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    ax = plt.axes()
+    ax.hist(samples, range=C_limits, alpha=0.6)
+    ax.set_xlabel(params_name)
+    ax.set_title('Prior')
+    fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
+    fig.savefig(os.path.join(plot_folder, 'prior'))
+    plt.close('all')
+
+
+def plot_regression(data, C_limits, params_name, plot_folder):
+    # [1.89779027]
+    x = np.linspace(C_limits[0], C_limits[1], 100)
+    y = -3.00431157*x+1.89779027
+    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    ax = plt.axes()
+    ax.scatter(data[:, 1], data[:, 0], marker=".", color='blue')
+    ax.plot(y, x)
+    ax.set_xlabel(params_name)
+    ax.set_title('regression')
+    fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.97)
+    fig.savefig(os.path.join(plot_folder, 'regression'))
+    plt.close('all')

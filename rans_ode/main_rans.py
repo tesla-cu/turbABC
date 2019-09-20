@@ -23,6 +23,7 @@ def main():
 
     ### Paths
     g.path = input['path']
+    print(g.path)
     if not os.path.isdir(g.path['output']):
         os.makedirs(g.path['output'])
     if input['abc_algorithm'] == 'abc_IMCMC':
