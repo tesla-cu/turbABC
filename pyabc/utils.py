@@ -68,7 +68,8 @@ def sampling_uniform_grid(N_each, C_limits):
 
 
 def pdf_from_array_with_x(array, bins, range):
-    pdf, edges = np.histogram(array, bins=bins, range=range, normed=1)
+    pdf, edges = np.histogram(array, bins=bins, range=range)
+    pdf = pdf/np.sum(pdf)
     x = (edges[1:] + edges[:-1]) / 2
     return x, pdf
 
@@ -85,5 +86,7 @@ def covariance_recursive(x, t, cov_prev, mean_prev):
     mean_new = mean_prev + 1 / (t + 1) * delta
     cov = (t - 1) / t * cov_prev + 1/(t + 1) * np.outer(delta, delta)
     return cov, mean_new
+
+
 
 

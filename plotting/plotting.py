@@ -1,6 +1,7 @@
 import os
 import numpy as np
-
+from sklearn.metrics import r2_score
+import postprocess.regression as regression
 import matplotlib as mpl
 mpl.use('pdf')
 import matplotlib.pyplot as plt
@@ -53,7 +54,7 @@ def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_f
     labels = []
     fig = plt.figure(figsize=(0.65*fig_width, 0.7*fig_height))
     ax = plt.gca()
-    colors = ['k', 'g', 'b', 'y', 'm']
+    colors = ['k', 'g', 'b', 'y', 'm', 'orange']
     # ax.set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     x = []
     for f, folder in enumerate(data_folders):
@@ -61,6 +62,7 @@ def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_f
     ind = np.argsort(x)
     for f, folder in enumerate(np.array(data_folders)[ind]):
         MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth'))
+
         # labels.append(int(float(x)))
         pdf = np.load(os.path.join(folder, 'Z.npz'))['Z']
         pdf_x = np.load(os.path.join(folder, 'Z.npz'))['grid']
@@ -76,12 +78,52 @@ def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_f
     plt.close('all')
 
 
+def plot_marginal_change_with_regression(data_folders, folder_reg, params_names, C_limits, num_bin_kde, plot_folder):
+
+    N_params = len(params_names)
+    colormap = plt.cm.gist_ncar
+    plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    labels = []
+    fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
+    for folder in data_folders:
+        x = os.path.basename(os.path.normpath(folder))[2:]
+        MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
+        MAP_x = MAP_x.reshape((-1, N_params))
+        MAP_reg = np.loadtxt(os.path.join(folder_reg, 'C_final_smooth{}'.format(num_bin_kde)))
+        labels.append('x = {}\%'.format(x))
+        for i in range(N_params):
+            data_marg = np.loadtxt(os.path.join(folder, 'marginal_smooth{}'.format(i)))
+            for map in MAP_x:
+                MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
+                axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=3)
+            axarr[i].plot(data_marg[0], data_marg[1], zorder=2)
+            axarr[i].axvline(MAP_reg[i], color='b', linestyle='--', zorder=1)
+            axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
+            axarr[i].set_xlabel(params_names[i])
+            # axarr[i].set_xlim(C_limits[i])
+    fig.subplots_adjust(left=0.05, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
+
+    plt.legend(labels, ncol=3, loc='upper center',
+               bbox_to_anchor=[-0.6, 1.3], labelspacing=0.0,
+               handletextpad=0.5, handlelength=1.5,
+               fancybox=True, shadow=True)
+
+    # custom_lines = [Line2D([0], [0], color=colors[0], lw=1),
+    #                 Line2D([0], [0], color=colors[1], linestyle='-', lw=1),
+    #                 Line2D([0], [0], color=colors[2], linestyle='-', lw=1)]
+    # axarr[0, 1].legend(custom_lines, ['true data', '3 parameters', '4 parameters'], loc='upper center',
+    #                    bbox_to_anchor=(0.99, 1.35), frameon=False,
+    #                    fancybox=False, shadow=False, ncol=3)
+
+    fig.savefig(os.path.join(plot_folder, 'marginal_change_with_regression'))
+    plt.close('all')
+
 
 def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder):
 
     N_params = len(params_names)
     colormap = plt.cm.gist_ncar
-    plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     labels = []
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
     for folder in data_folders:
@@ -119,7 +161,7 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
 def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits, plot_folder):
     N_params = len(params_names)
     colormap = plt.cm.gist_ncar
-    plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.7 * fig_height))
     MAP = []
     # np.empty((len(data_folders), N_params))
@@ -131,7 +173,7 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
     for i, folder in enumerate(data_folders):
         x[i] = float(os.path.basename(os.path.normpath(folder))[2:])
         print('x = ', x[i])
-        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde))))
+        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth'.format(num_bin_kde))))
         for j, level in enumerate(conf_level):
             confidence[i, :, j] = np.loadtxt(os.path.join(folder, 'confidence_{}'.format(int(100*(1-level)))))
             quantile[i, :, j] = np.loadtxt(os.path.join(folder, 'quantile_{}'.format(int(100*(1-level)))))
@@ -147,9 +189,7 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
     for i in range(N_params):
         for j in range(len(x)):
             MAP[j] = MAP[j].reshape((-1, N_params))
-            print(MAP[j].shape)
-            for k in range(MAP[j].shape[0]):
-                axarr[i].scatter(MAP[j][k, i], x[j], s=10, color='r', zorder=2)
+            axarr[i].scatter(MAP[j][i], x[j], s=10, color='r', zorder=2)
         for j in range(len(conf_level)):
             axarr[i].semilogy(confidence[:, i, j,  0], x, color=colors[j])
             axarr[i].semilogy(confidence[:, i, j, 1], x, color=colors[j])
@@ -199,19 +239,51 @@ def plot_eps_change(data_folders, plot_folder):
 def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names, plot_folder):
 
     N_params = len(C_limits)
-    max_value = 0.0
+    max_value, max_value2 = 0.0, 0.0
     data = dict()
     for i in range(N_params):
         for j in range(N_params):
             if i < j:
-                data[str(i)+str(j)] = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}{}'.format(i, j)))
+                data[str(i) + str(j)] = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}{}'.format(i, j)))
                 max_value = max(max_value, np.max(data[str(i)+str(j)]))
-    max_value = int(max_value)
-    cmap = plt.cm.jet  # define the colormap
-    cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
-    # cmaplist[0] = 'black'   # force the first color entry to be black
+            if i > j:
+                data[str(i) + str(j)] = np.loadtxt(
+                    os.path.join(data_folder, 'conditional_smooth{}{}'.format(i, j)))
+                norm = np.sum(data[str(i) + str(j)])
+                # print('norm = ', norm, np.max(data[str(i) + str(j)]))
+                data[str(i) + str(j)] /= norm
+                max_value2 = max(max_value2, np.max(data[str(i) + str(j)]))
+            # print(max_value, max_value2)
+
+    # max_value = int(max_value)
+    # cmap = plt.cm.jet  # define the colormap
+    # cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+    # # cmaplist[0] = 'black'   # force the first color entry to be black
+    # cmaplist[0] = 'white' # force the first color entry to be white
+    # cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
+
+    ###################################################################################################
+    cmap2 = plt.cm.inferno  # define the colormap
+    cmap = plt.cm.BuPu  # define the colormap
+    cmaplist = [cmap(i) for i in reversed(range(cmap.N))]  # extract all colors from the map
+    cmaplist2 = [cmap2(i) for i in (range(cmap2.N))]  # extract all colors from the map
+    gamma1 = 1
+    gamma2 = 1
+    ###################################################################################################
+    # cmap2 = plt.cm.Greys   # define the colormap
+    # cmap = plt.cm.Greys  # define the colormap
+    # cmaplist = [cmap(i) for i in (range(cmap.N))]  # extract all colors from the map
+    # cmaplist2 = [cmap2(i) for i in (range(cmap2.N))]  # extract all colors from the map
+    # gamma1 = 1
+    # gamma2 = 1
+    ###################################################################################################
+    # cmaplist[0] = 'black'  # 'white' # force the first color entry to be white
+    # cmaplist2[0] = 'black'  # 'white' # force the first color entry to be white
     cmaplist[0] = 'white' # force the first color entry to be white
-    cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
+    cmaplist2[0] = 'white'  # force the first color entry to be white
+    cmap = colors.LinearSegmentedColormap.from_list('Custom cmap', cmaplist)
+    cmap2 = colors.LinearSegmentedColormap.from_list('Custom cmap', cmaplist2)
+
 
     confidence = np.loadtxt(os.path.join(data_folder, 'confidence_75'))
     fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
@@ -272,6 +344,32 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
 
                 im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                extent=ext, vmin=0, vmax=max_value)
+            elif i > j:
+                ax = plt.subplot2grid((N_params, N_params), (i, j))
+                ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
+                ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+                # ax.tick_params(axis='both', which='major', pad=2)
+                # ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[j]))
+                # ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))
+                # if True and j != 2:
+                #     ax.text(0.02, 0.07, '(' + string.ascii_lowercase[i * N_params + j] + ')',
+                #             transform=ax.transAxes, size=10, weight='black')
+                # else:
+                #     ax.text(0.02, 0.85, '('+string.ascii_lowercase[i*N_params+j]+')',
+                #         transform=ax.transAxes, size=10, weight='black')
+                # if j == 0:
+                #     ax.set_ylabel(params_names[i])
+                # else:
+                #     ax.yaxis.set_major_formatter(plt.NullFormatter())
+                # if i != (N_params - 1):
+                #     ax.xaxis.set_major_formatter(plt.NullFormatter())
+                # else:
+                #     ax.set_xlabel(params_names[j], labelpad=2)
+
+                im_cond = ax.imshow(data[str(i) + str(j)], origin='lower', cmap=cmap2, aspect='auto', extent=ext,
+                                    norm=colors.PowerNorm(gamma=gamma2), vmax=max_value2)
+                ax.axvline(c_final_smooth[j], linestyle='--', color='r')
+                ax.axhline(c_final_smooth[i], linestyle='--', color='r')
     # cax = plt.axes([0.05, 0.1, 0.01, 0.26])
     # plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
 
@@ -280,16 +378,15 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
     plt.close('all')
 
 
-def plot_marginal_pdf(path, C_limits):
+def plot_marginal_raw_pdf(data_folder, C_limits, num_bin_joint, params_names, plot_folder):
 
-    params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
     N_params = len(C_limits)
     max_value = 0.0
     data = dict()
     for i in range(N_params):
         for j in range(N_params):
             if i < j:
-                data[str(i)+str(j)] = np.loadtxt(os.path.join(path['output'], 'marginal{}{}'.format(i, j)))
+                data[str(i)+str(j)] = np.loadtxt(os.path.join(data_folder, 'marginal{}{}'.format(i, j)))
                 max_value = max(max_value, np.max(data[str(i)+str(j)]))
     max_value = int(max_value)
     cmap = plt.cm.jet  # define the colormap
@@ -298,27 +395,27 @@ def plot_marginal_pdf(path, C_limits):
     cmaplist[0] = 'white' # force the first color entry to be white
     cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
 
-    confidence = np.loadtxt(os.path.join(path['output'], 'confidence'))
+    confidence = np.loadtxt(os.path.join(data_folder, 'confidence_95'))
     fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
-                data_marg = np.loadtxt(os.path.join(path['output'], 'marginal_{}'.format(i)))
+                data_marg = np.loadtxt(os.path.join(data_folder, 'marginal_{}'.format(i)))
 
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1])
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
 
-                if i == 0:
-                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
-                if i == 1:
-                    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
-                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-                if i == 2:
-                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
-                if i == 3:
-                    ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                # if i == 0:
+                #     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
+                # if i == 1:
+                #     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # if i == 2:
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # if i == 3:
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.05))
 
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
@@ -343,7 +440,6 @@ def plot_marginal_pdf(path, C_limits):
                 ax.tick_params(axis='both', which='minor', direction='in')
                 ax.tick_params(axis='both', which='major', pad=0.8)
                 ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
-
                 im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                extent=ext, vmin=0, vmax=max_value)
     # cax = plt.axes([0.05, 0.1, 0.01, 0.26])
@@ -351,7 +447,7 @@ def plot_marginal_pdf(path, C_limits):
 
     fig.subplots_adjust(left=0.03, right=0.98, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
 
-    fig.savefig(os.path.join(path['plots'], 'marginal'))
+    fig.savefig(os.path.join(plot_folder, 'marginal'))
     plt.close('all')
 
 
@@ -483,7 +579,7 @@ def plot_1d_dist_scatter(data, C_limits, params_name, x_list, eps_list, plot_fol
 
     fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
     ax = plt.axes()
-    colors = ['r', 'g', 'k', 'y', 'm' ]
+    colors = ['r', 'g', 'k', 'y', 'm', 'orange' ]
     ax.axis(xmin=C_limits[0], xmax=C_limits[1], ymax=1.005 * np.max(eps_list), ymin=0.98 * np.min(eps_list))
     ax.scatter(data[:, 0], data[:, 1], marker=".", color='blue')
     for i, eps in enumerate(eps_list):
@@ -510,9 +606,9 @@ def plot_sampling_hist(samples, C_limits, params_name, plot_folder):
 
 
 def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
-    # dist [[ 1.59051902]
-    #  [-1.55951292]]
-    print(solution.shape)
+
+    def line(i, x):
+        return solution[i, 0] + solution[i, 1] * x
     true = TruthData(valid_folder='../rans_ode/valid_data/', case='impulsive')
     full_true = true.sumstat_true
     for i in range(len(full_true)):
@@ -520,7 +616,10 @@ def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
         x = np.linspace(np.min(new), np.max(new), 100)
         print(solution[i])
         print(full_true[4])
-        y = solution[i, 0]+solution[i, 1]*x
+        y = line(i, x)
+        R = regression.calc_r2_score(c[:, 0], line(i, new))
+        R1 = r2_score(c[:, 0], line(i, new))
+        print('R', i, R, R1)
         fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
         ax = plt.axes()
         ax.scatter(new, c, marker=".", color='blue')
@@ -528,11 +627,22 @@ def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
         ax.plot(x, y, color='k')
         ax.set_ylabel(params_name)
         ax.set_xlabel(r'$\mathcal{S} - \mathcal{S}_{true}$')
-        ax.set_title('Linear regression')
+        ax.set_title(r'Linear regression, $R^2 = {}$'.format(np.round(R, 3)))
         fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.9)
         fig.savefig(os.path.join(plot_folder, 'regression_full{}'.format(i)))
 
+        # plot residuals
+        fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+        ax = plt.axes()
+        ax.scatter(new, (c[:, 0] - line(i, new))/(np.max(c) - np.min(c)), marker=".", color='blue')
+        ax.axhline(0.0, color='k')
+        ax.set_ylabel(params_name)
+        ax.set_xlabel(r'$\mathcal{S} - \mathcal{S}_{true}$')
+        ax.set_title('Linear regression')
+        fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.9)
+        fig.savefig(os.path.join(plot_folder, 'regression_res{}'.format(i)))
 
+    plt.close('all')
     # y = -1.55951292*x+1.59051902
     # fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
     # ax = plt.axes()

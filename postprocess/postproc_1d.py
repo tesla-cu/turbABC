@@ -34,7 +34,7 @@ def main(args):
         level=logging.DEBUG)
 
     logging.info('\n############# POSTPROCESSING ############')
-    x_list = [0.01, 0.03, 0.05, 0.1, 0.3]
+    x_list = [0.005, 0.01, 0.03, 0.05, 0.1, 0.3]
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     N_params = 1
     files_abc = glob.glob1(path['output'], "classic_abc*.npz")
@@ -74,8 +74,8 @@ def main(args):
         np.savetxt(os.path.join(folder, 'C_final_raw{}'.format(num_bin_raw)), [x[np.argmax(y)]])
         # ##############################################################################
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        grid, Z = kdepy_fftkde(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
-        C_final_smooth = [grid[np.argmax(Z)]]
+        Z,C_final_smooth = kdepy_fftkde(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
+        grid = np.linspace(C_limits[0]-1e-10, C_limits[1]+1e-10, num_bin_kde+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)
         np.savetxt(os.path.join(folder, 'C_final_smooth'), C_final_smooth)
@@ -106,20 +106,14 @@ def main(args):
         print('{} samples are taken for regression ({}% of {})'.format(n, x * 100, len(accepted)))
         samples = accepted[:n, :N_params]
         dist_reg = dist[:n, -1].reshape((-1, 1))
-        ##########################################################################
+        #########################################################################
         logging.info('Regression with distance')
         folder = os.path.join(path['regression_dist'], 'x_{}'.format(x*100))
         if not os.path.isdir(folder):
             os.makedirs(folder)
-        # delta = np.max(dist)
-        # new_samples = regression.regression_dist(samples, dist_reg, x=1)
-        for i in range(len(Truth.sumstat_true)):
-            print(i)
-            new_samples, solution = regression(samples, (sum_stat[:n, i] - Truth.sumstat_true[i]).reshape((-1, 1)),
-                                               dist_reg, x=1)
-            np.savetxt(os.path.join(folder, 'solution{}'.format(i)), solution)
-        # new_samples = regression.regression(accepted, sum_stat, dist, Truth.sumstat_true, x=x)
-        new_samples, solution = regression(samples, dist_reg, dist_reg, x=1)
+        # new_samples, solution = regression(samples, (sum_stat[:n] - Truth.sumstat_true).reshape((-1, 1)),
+        #                                    dist_reg, 1, folder)
+        new_samples, solution = regression(samples, dist_reg, dist_reg, 1, folder)
         limits = np.empty((N_params, 2))
         for i in range(N_params):
             limits[i, 0] = np.min(new_samples[:, i])
@@ -132,12 +126,12 @@ def main(args):
         np.savetxt(os.path.join(folder, 'reg_limits'), limits)
         num_bin_kde_reg = 20
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde_reg))
-        grid, Z = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
-        C_final_smooth = [grid[np.argmax(Z)]]
+        Z, C_final_smooth = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        grid = np.linspace(limits[0, 0]-1e-10, limits[0, 1]+1e-10, num_bin_kde_reg+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)
-        np.savetxt(os.path.join(folder, 'C_final_smooth'), C_final_smooth)
-        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
+        np.savetxt(os.path.join(folder, 'C_final_smooth'), C_final_smooth[0])
+        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth[0]))
         np.savez(os.path.join(folder, 'Z.npz'), Z=Z, grid=grid)
         # for q in [0.05, 0.1, 0.25]:
         #     pp.marginal_confidence(N_params, folder, q)
@@ -146,8 +140,7 @@ def main(args):
         folder = os.path.join(path['regression_full'], 'x_{}'.format(x*100))
         if not os.path.isdir(folder):
             os.makedirs(folder)
-        new_samples, _ = regression(samples, sum_stat[:n] - Truth.sumstat_true, dist_reg, x=1)
-        # new_samples = regression.regression(accepted, sum_stat, dist, Truth.sumstat_true, x=x)
+        new_samples, _ = regression(samples, sum_stat[:n] - Truth.sumstat_true, dist_reg, 1, folder)
         limits = np.empty((N_params, 2))
         for i in range(N_params):
             limits[i, 0] = np.min(new_samples[:, i])
@@ -159,13 +152,13 @@ def main(args):
         print('new limits = ', limits)
         np.savetxt(os.path.join(folder, 'reg_limits'), limits)
         num_bin_kde_reg = 20
-        logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        grid, Z = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde)
-        C_final_smooth = [grid[np.argmax(Z)]]
+        logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde_reg))
+        Z, C_final_smooth = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        grid = np.linspace(limits[0, 0]-1e-10, limits[0, 1]+1e-10, num_bin_kde_reg+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)
-        np.savetxt(os.path.join(folder, 'C_final_smooth'), C_final_smooth)
-        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
+        np.savetxt(os.path.join(folder, 'C_final_smooth'), C_final_smooth[0])
+        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth[0]))
         np.savez(os.path.join(folder, 'Z.npz'), Z=Z, grid=grid)
         # for q in [0.05, 0.1, 0.25]:
         #     pp.marginal_confidence(N_params, folder, q)

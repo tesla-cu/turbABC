@@ -1,10 +1,49 @@
 import os
 import glob
 
+import matplotlib as mpl
+mpl.use('pdf')
+import matplotlib.pyplot as plt
+
 import numpy as np
 import plotting
 import plot_compare_truth
 
+
+def plot_MAP_comparison(data_folders, data_folders_reg, plot_folder, C_limits):
+    MAP, MAP_reg = [], []
+    x = np.empty(len(data_folders))
+    for i, folder in enumerate(data_folders):
+        x[i] = float(os.path.basename(os.path.normpath(folder))[2:])
+        print('x = ', x[i])
+        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth')))
+    for folder in data_folders_reg:
+        MAP_reg.append(np.loadtxt(os.path.join(folder, 'C_final_smooth')))
+    ind = np.argsort(x)
+    x = x[ind]
+    MAP = np.array(MAP)[ind]
+    MAP_reg = np.array(MAP_reg)[ind]
+    print(MAP)
+    print(MAP_reg)
+    colors = ['b', 'g', 'y']
+    colors2 = ['orange', 'k', 'magenta']
+    fig = plt.figure()
+    ax = plt.gca()
+    for j in range(len(x)):
+        MAP[j] = MAP[j].reshape((-1, 1))
+        MAP_reg[j] = MAP_reg[j].reshape((-1, 1))
+        if len(MAP[j])>1:
+            for map in MAP[j]:
+                ax.scatter(map, x[j], s=10, color='r', zorder=2)
+        else:
+            ax.scatter(MAP[j], x[j], s=10, color='r', zorder=2)
+
+        ax.scatter(MAP_reg[j], x[j], s=10, color='k', zorder=2)
+    ax.set_xlabel('C')
+    ax.set_xlim([1.2, 1.7])
+    ax.set_yscale('log')
+    fig.savefig(os.path.join(plot_folder, 'MAP_change'))
+    plt.close('all')
 
 
 def main():
@@ -16,7 +55,7 @@ def main():
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
 
-    num_bin_kde = 100
+    num_bin_kde = 20
     folders_abc = glob.glob1(path['output'], "x_*")
     print(folders_abc)
     folders = [os.path.join(path['output'], i) for i in folders_abc]
@@ -46,10 +85,11 @@ def main():
     data_10 = np.load(os.path.join(path['output'], '1d_dist_scatter_0.1.npz'))
     solution = np.empty((data_10['sumstat'].shape[1], 2))
     for i in range(data_10['sumstat'].shape[1]):
-        solution[i] = np.loadtxt(os.path.join(path['output'], 'regression_dist/x_10.0/solution{}'.format(i)))
-    plotting.plot_regression(data_10['C'],data_10['sumstat'], data_10['dist'], solution, params_names[0], path['plots'])
-    # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
+        solution[i] = np.loadtxt(os.path.join(path['output'], 'regression_full/x_10.0/solution{}'.format(i)))
+    plotting.plot_regression(data_10['C'], data_10['sumstat'], data_10['dist'], solution, params_names[0], path['plots'])
+
     # plotting.plot_eps_change(folders, path['plots'])
+    folders1 = folders
     ###################################################################################################################
     reg_type = ['regression_dist', 'regression_full']
 
@@ -77,8 +117,9 @@ def main():
             plot_compare_truth.plot_strained(c, reg_plot_folder)
         print("Plot change of marginal pdfs for different epsilon")
         plotting.plot_1d_pdf_change(folders, params_names, C_limits, num_bin_kde_reg, plot_folder)
+        folders2 = folders
     ###################################################################################################################
-
+    plot_MAP_comparison(folders1, folders2, path['plots'], C_limits)
 
 if __name__ == '__main__':
     main()
