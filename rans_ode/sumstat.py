@@ -34,20 +34,19 @@ class TruthData(object):
 
 
 def calc_sum_stat(x, y, valid_data_x):
-    points = np.interp(valid_data_x, x, y)
-    points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))
-    return points
+    return np.interp(valid_data_x, x, y)
 
 
-def calc_err_norm1(x, y, valid_data_x, valid_data_y):
-    points = np.interp(valid_data_x, x, y)
-    points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
-    diff = points - valid_data_y
-    return np.max(np.abs(diff))
 
-
-def calc_err_norm2(x, y, valid_data_x, valid_data_y):
-    points = np.interp(valid_data_x, x, y)
-    points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
-    diff = norm2(points - valid_data_y)
-    return diff
+# def calc_err_norm1(x, y, valid_data_x, valid_data_y):
+#     points = np.interp(valid_data_x, x, y)
+#     points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
+#     diff = points - valid_data_y
+#     return np.max(np.abs(diff))
+#
+#
+# def calc_err_norm2(x, y, valid_data_x, valid_data_y):
+#     points = np.interp(valid_data_x, x, y)
+#     points += np.random.normal(loc=0.0, scale=0.0008, size=len(points))   # adding gaussian noise
+#     diff = norm2(points - valid_data_y)
+#     return diff

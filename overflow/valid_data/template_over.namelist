@@ -1,0 +1,52 @@
+ $GLOBAL
+    RESTRT= .F.,  NSTEPS = 5000, NFOMO = 1, NSAVE = 500, 
+    MULTIG= .T.,  FMG   = .T., FMGCYC= 500,500,
+    NQT = 205,
+    $END
+
+ $ODABC
+    OD_BETAST = 0.09, OD_BETA1 = 1.2, OD_BETA2 = 1.087, OD_SIGW1 = 0.5,
+    OD_A1 = 0.4,
+    $END
+
+ $FLOINP
+    ALPHA  = 0.0,    BETA   = 0,
+    FSMACH = 0.875,  REY    = 2.763E6,
+    TINF = 540.0,  
+    $END
+
+ $VARGAM $END
+
+
+ $GRDNAM
+    NAME = 'bump',
+    $END
+
+ $NITERS $END
+
+ $METPRM
+    $END
+
+ $TIMACU
+    ITIME = 4, CFLMAX = 4.0,
+    $END
+
+ $SMOACU
+  $END
+
+ $VISINP
+    VISC = .T., 
+    $END
+
+ $BCINP
+    IBTYP =    5, 47, 47, 22, 47,
+    IBDIR =    3,  1, -1,  2, -3,
+    JBCS  =    1,  1, -1,  1,  1,
+    JBCE  =   -1,  1, -1, -1, -1,
+    KBCS  =    1,  1,  1,  1,  1,
+    KBCE  =   -1, -1, -1,  1, -1,
+    LBCS  =    1,  1,  1,  1, -1,
+    LBCE  =    1, -1, -1, -1, -1,
+    $END
+
+ $SCEINP $END

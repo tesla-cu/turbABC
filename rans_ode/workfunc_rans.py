@@ -64,7 +64,8 @@ def abc_work_function_impulsive(c):
     # sum_stat_b4 = calc_sum_stat(np.abs(g.Strain_plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_b[:, 0],)
 
     sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4))
-    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
+    err = calc_err(sum_stat+noise, g.Truth.sumstat_true)
     result = np.hstack((c, sum_stat, err)).tolist()
     return result
 
