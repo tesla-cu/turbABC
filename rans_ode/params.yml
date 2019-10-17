@@ -11,7 +11,7 @@ abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
 algorithm:
   abc:
-      sampling: 'random'     # 'uniform', 'random', 'sobol'
+      sampling: 'uniform'     # 'uniform', 'random', 'sobol'
       N: 10000                # per dimension
   ############################################################################################################
   abc_IMCMC:

@@ -30,13 +30,31 @@ def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits):
     return H, C_final_joint
 
 
+def calc_conditional_pdf_smooth(Z, data_folder):
+
+    N_params = len(Z.shape)
+    params = np.arange(N_params)
+    ind_max = np.argwhere(Z == np.max(Z))[0]
+
+    for i in range(N_params):
+        for j in range(N_params):
+            if i > j:
+                # Smooth
+                index = tuple(np.where(np.logical_and(params != i, params != j))[0])
+                H = Z.copy()
+                for k, ind in enumerate(index):
+                    H = np.take(H, ind_max[ind], axis=ind-k)
+                np.savetxt(os.path.join(data_folder, 'conditional_smooth{}{}'.format(i, j)), H.T)
+
+
 def calc_marginal_pdf_smooth(Z, num_bin_joint, C_limits, data_folder):
 
     N_params = len(C_limits)
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
-                y = np.sum(Z, axis=tuple(np.where(np.arange(N_params) != i)[0]))
+                ind = tuple(np.where(np.arange(N_params) != i)[0])
+                y = np.sum(Z, axis=ind)
                 x = np.linspace(C_limits[i, 0], C_limits[i, 1], num_bin_joint + 1)
                 y = y/np.sum(y)
                 np.savetxt(os.path.join(data_folder, 'marginal_smooth{}'.format(i)), [x, y])
@@ -56,8 +74,11 @@ def calc_marginal_pdf_raw(accepted, num_bin_joint, C_limits, path):
                 x, y = pdf_from_array_with_x(accepted[:, i], bins=num_bin_joint, range=C_limits[i])
                 np.savetxt(os.path.join(path, 'marginal_{}'.format(i)), [x, y])
             elif i < j:
-                H, xedges, yedges = np.histogram2d(x=accepted[:, j], y=accepted[:, i], bins=num_bin_joint,
-                                                   range=[C_limits[j], C_limits[i]])
+                # note: the histogram does not follow the Cartesian convention x values are on the abscissa and y values
+                # on the ordinate axis. Rather, x is histogrammed along the first dimension of the array (vertical),
+                # and y along the second dimension of the array (horizontal)
+                H, xedges, yedges = np.histogram2d(x=accepted[:, i], y=accepted[:, j], bins=num_bin_joint,
+                                                   range=[C_limits[i], C_limits[j]], density=1)
                 np.savetxt(os.path.join(path, 'marginal{}{}'.format(i, j)), H)
                 np.savetxt(os.path.join(path, 'marginal_bins{}{}' .format(i, j)), [xedges, yedges])
 

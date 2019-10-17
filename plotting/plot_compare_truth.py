@@ -47,10 +47,6 @@ plt.rcParams['axes.linewidth'] = 1
 
 folder_valid = '../rans_ode/valid_data/'
 
-
-
-
-
 def plot_impulsive(c_array, plot_folder):
     Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive')
     Strain = workfunc.StrainTensor(valid_folder=folder_valid)
@@ -203,3 +199,39 @@ def plot_strained(c_array, plot_folder):
     fig.subplots_adjust(left=0.15, right=0.95, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(plot_folder, 'compare_strained'))
     plt.close('all')
+
+
+def plot_experiment(plot_folder, indices=None):
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive')
+    fig = plt.figure(figsize=(0.8 * fig_width, 1 * fig_height))
+    ax = plt.gca()
+    ax.scatter(Truth.axi_exp_k[:, 0], Truth.axi_exp_k[:, 1], marker='o', label='axisymmetric expansion')
+    ax.scatter(Truth.axi_con_k[:, 0], Truth.axi_con_k[:, 1], marker='o', label='axisymmetric contraction')
+    ax.scatter(Truth.shear_k[:, 0], Truth.shear_k[:, 1], marker='o', label='pure shear')
+    ax.scatter(Truth.plane_k[:, 0], Truth.plane_k[:, 1], marker='o', label='plain strain')
+    if indices is not None:
+        truth = np.vstack((Truth.axi_exp_k, Truth.axi_con_k, Truth.shear_k, Truth.plane_k))
+        ax.scatter(truth[indices, 0], truth[indices, 1], color='k',  marker='o')
+    ax.set_xlabel(r'$S\cdot t$')
+    ax.set_ylabel(r'$k/k_0$')
+    # ax.axis(xmin=0, xmax=5, ymin=0, ymax=2.5)
+    plt.legend(frameon=True)
+    fig.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.95)
+    fig.savefig(os.path.join(plot_folder, 'impulsive_k'))
+
+    fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
+    ax = plt.gca()
+    ax.scatter(Truth.axi_exp_a[:, 0], 2 * Truth.axi_exp_a[:, 1], marker='o', label=r'axisymmetric expansion $a_{11}$')
+    ax.scatter(Truth.axi_con_a[:, 0], 2 * Truth.axi_con_a[:, 1], marker='o', label=r'axisymmetric contraction $a_{11}$')
+    ax.scatter(Truth.plane_a11[:, 0], 2 * Truth.plane_a11[:, 1], marker='o',  label=r'plain strain $a_{11}$')
+    ax.scatter(Truth.plane_a22[:, 0], 2 * Truth.plane_a22[:, 1], marker='o', label=r'plain strain $a_{22}$')
+
+    ax.set_xlabel(r'$S\cdot t$')
+    ax.set_ylabel(r'$a$')
+    # ax.axis(xmin=0, xmax=1.5, ymin=0, ymax=2.5)
+    plt.legend()
+    fig.subplots_adjust(left=0.15, right=0.98, bottom=0.14, top=0.95)
+    fig.savefig(os.path.join(plot_folder, 'impulsive_a'))
+    plt.close('all')
+
+
