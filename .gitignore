@@ -189,6 +189,7 @@ venv.bak/
 output/
 plots/
 /tmp/
-/ABC_first_attempt/
+/OUTPUT_DATA/
 /pyabc.zip
 /rans_ode.zip
+OUTPUT_DATA/
