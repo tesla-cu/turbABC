@@ -78,6 +78,28 @@ class KDETest(unittest.TestCase):
         # plt.plot(Z_scipy-Z_kdepy)
         # plt.show()
 
+    def test_kde2d_symmetric(self):
+        num_bin_joint = 100
+        data = np.random.multivariate_normal((3, 3), [[0.8, 0], [0,  0.8]], 100)
+        a = [0, 0]
+        b = [6, 6]
+        grid, _ = kde.grid_for_kde(a, b, num_bin_joint)
+        Z_scipy = kde.gaussian_kde_scipy(data, a, b, num_bin_joint)
+        Z_kdepy = kde.kdepy_fftkde(data, a, b, num_bin_joint)
+        # Normalize to summ up to 1
+        Z_scipy = Z_scipy / np.sum(Z_scipy)
+        Z_kdepy = Z_kdepy / np.sum(Z_kdepy)
+        # find MAP values
+        MAP_scipy = kde.find_MAP_kde(Z_scipy, a, b)
+        MAP_kdepy = kde.find_MAP_kde(Z_kdepy, a, b)
+
+        np.testing.assert_array_almost_equal(Z_scipy, Z_kdepy, decimal=4)
+        np.testing.assert_array_almost_equal(MAP_scipy, MAP_kdepy)
+
+        # print(np.sum(Z_scipy), np.sum(Z_kdepy))
+        # print(np.mean(np.abs(Z_scipy - Z_kdepy)))
+        # print(MAP_kdepy, MAP_scipy)
+
     def test_kde2d(self):
         num_bin_joint = 100
         data = np.random.multivariate_normal((3, 3), [[0.8, 0.05], [0.05, 0.7]], 100)
@@ -87,13 +109,13 @@ class KDETest(unittest.TestCase):
         Z_scipy = kde.gaussian_kde_scipy(data, a, b, num_bin_joint)
         Z_kdepy = kde.kdepy_fftkde(data, a, b, num_bin_joint)
         # Normalize to summ up to 1
-        Z_scipy = Z_scipy / np.trapz(np.trapz(Z_scipy, x=grid[0], axis=0), grid[1][0, :])
-        Z_kdepy = Z_kdepy / np.trapz(np.trapz(Z_kdepy, x=grid[0], axis=0), grid[1][0, :])
+        Z_scipy = Z_scipy / np.sum(Z_scipy)
+        Z_kdepy = Z_kdepy / np.sum(Z_kdepy)
         # find MAP values
         MAP_scipy = kde.find_MAP_kde(Z_scipy, a, b)
         MAP_kdepy = kde.find_MAP_kde(Z_kdepy, a, b)
 
-        np.testing.assert_array_almost_equal(Z_scipy, Z_kdepy, decimal=2)
+        np.testing.assert_array_almost_equal(Z_scipy, Z_kdepy, decimal=4)
         np.testing.assert_array_almost_equal(MAP_scipy, MAP_kdepy, decimal=1)
 
         # print(np.sum(Z_scipy), np.sum(Z_kdepy))
