@@ -9,13 +9,15 @@ import plot_compare_truth
 
 
 def main():
-    basefolder = '../runs_abc/'
+    basefolder = '../'
 
     path = {'output': os.path.join(basefolder, 'output'), 'plots': os.path.join(basefolder, 'plots')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
-    params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
+    # params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
+    params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$']
+
     num_bin_kde = 20
     folders_abc = glob.glob1(path['output'], "x_*")
     print(folders_abc)
@@ -29,10 +31,10 @@ def main():
         print(plot_folder)
         c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
         print(c)
-        plot_compare_truth.plot_impulsive(c, plot_folder)
-        plot_compare_truth.plot_periodic(c, plot_folder)
-        plot_compare_truth.plot_decay(c, plot_folder)
-        plot_compare_truth.plot_strained(c, plot_folder)
+        # plot_compare_truth.plot_impulsive(c, plot_folder)
+        # plot_compare_truth.plot_periodic(c, plot_folder)
+        # plot_compare_truth.plot_decay(c, plot_folder)
+        # plot_compare_truth.plot_strained(c, plot_folder)
         plotting.plot_marginal_raw_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
         plotting.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
     ###################################################################################################################

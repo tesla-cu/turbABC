@@ -5,15 +5,19 @@ import os
 class TruthData(object):
     def __init__(self, valid_folder, case):
         self.sumstat_true = np.empty((0,))
+        self.length = []
         if 'cp' in case:
             self.cp = np.loadtxt(os.path.join(valid_folder, 'experiment_cp.txt'))
             self.sumstat_true = np.hstack((self.sumstat_true, self.cp[:, 1]))
+            self.length.append(len(self.sumstat_true))
         if 'u' in case:
             self.x, self.u_flat, self.u = self.readfile_with_zones(os.path.join(valid_folder, 'experiment_u.txt'))
             self.sumstat_true = np.hstack((self.sumstat_true, self.u_flat[:, 1]))
+            self.length.append(len(self.sumstat_true))
         if 'uv' in case:
             self.x, self.uv_flat, self.uv = self.readfile_with_zones(os.path.join(valid_folder, 'experiment_uv.txt'))
             self.sumstat_true = np.hstack((self.sumstat_true, self.uv_flat[:, 1]))
+            self.length.append(len(self.sumstat_true))
 
     @staticmethod
     def readfile_with_zones(filename):

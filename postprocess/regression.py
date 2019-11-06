@@ -1,22 +1,20 @@
 import os
 import numpy as np
 from pyabc.utils import define_eps
-from sklearn.metrics import r2_score
+# from sklearn.metrics import r2_score
 # from plotting import plot_compare_truth
 
 
 def calc_r2_score(y, fit_line):
-    """
-    The same as sklearn.metrics.r2_score(y, fit_line)
-    :param y:
-    :param fit_line:
-    :return:
+    """ The same as sklearn.metrics.r2_score(y, fit_line)
+    :param y: y coordinates of samples
+    :param fit_line: y coordinates of fitted line
+    :return: R^2 score
     """
     y_mean = np.mean(y)
-    SS_tot = np.sum((y - y_mean)**2)
-    # SS_reg = np.sum((fit_line - y_mean)**2)
-    SS_res = np.sum((y-fit_line)**2)
-    R = 1 - SS_res/SS_tot
+    ss_tot = np.sum((y - y_mean)**2)
+    ss_res = np.sum((y-fit_line)**2)
+    R = 1 - ss_res/ss_tot
     return R
 
 
@@ -34,7 +32,15 @@ def epanechnikov_kernel(dist, delta):
 
 
 def test_statistics(samples, sumstat_dif, dist, delta, folder):
-
+    """ Separately finds linear fit for each summary statistic,
+        calculate R^2 scores of fits and returns indices of summary statistic with R^2 score > 0.85.
+    :param samples:
+    :param sumstat_dif:
+    :param dist:
+    :param delta:
+    :param folder:
+    :return:
+    """
     N_sumstat = sumstat_dif.shape[1]
     print('N_stat =', N_sumstat)
     indices = np.arange(N_sumstat)
@@ -53,7 +59,6 @@ def test_statistics(samples, sumstat_dif, dist, delta, folder):
     print(len(good_sumstat_indices), sumstat_dif.shape[1])
     print(np.min(sumstat_dif, axis=0) < 0, np.max(sumstat_dif, axis=0) > 0)
     print(np.logical_and(np.min(sumstat_dif, axis=0) < 0, np.max(sumstat_dif, axis=0) > 0))
-
 
     return good_sumstat_indices
 

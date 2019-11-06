@@ -16,6 +16,7 @@ elif g.norm_order == 2:
 
 def work_function(overflow, c, i):
 
+    logging.debug('Calibration {}: {}'.format(i, c))
     overflow.write_inputfile(c)
     overflow.run_overflow(i)    # run output
     cp, u, uv = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.indices)
@@ -28,7 +29,7 @@ def work_function(overflow, c, i):
         stat_uv = calc_sum_stat(g.Grid.grid_y[x], uv[x], g.Truth.uv[x][:, 0])
         sum_stat_uv = np.hstack((sum_stat_uv, stat_uv))
     sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv))
-    # noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
+    print('!!!!!!!!!!!!', len(sum_stat))
     err = calc_err(sum_stat, g.Truth.sumstat_true)
     result = np.hstack((c, sum_stat, err)).tolist()
     return result

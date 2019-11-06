@@ -98,8 +98,8 @@ def kdepy_fftkde(data, a, b, num_bin_joint):
     N_params = len(data[0])
     logging.info('KDEpy.FFTKDe: Gaussian KDE {} dimensions'.format(N_params))
     time1 = time()
-    a = np.array(a)
-    b = np.array(b)
+    a = np.array(a)-1e-10
+    b = np.array(b)+1e-10
     data = 2 * (data - a) / (b - a) - 1
     bandwidth = bw_from_kdescipy(data, 'scott')
     _, grid_ravel = grid_for_kde(-1*np.ones(N_params), np.ones(N_params), num_bin_joint)

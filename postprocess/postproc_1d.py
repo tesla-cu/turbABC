@@ -6,7 +6,7 @@ import glob
 import yaml
 import postprocess.postprocess_func as pp
 from pyabc.utils import define_eps
-from pyabc.kde import gaussian_kde_scipy, kdepy_fftkde, grid_for_kde
+from pyabc.kde import gaussian_kde_scipy, kdepy_fftkde, find_MAP_kde
 import rans_ode.sumstat as sumstat
 from postprocess.regression import regression
 import pyabc.utils as utils
@@ -74,7 +74,8 @@ def main(args):
         np.savetxt(os.path.join(folder, 'C_final_raw{}'.format(num_bin_raw)), [x[np.argmax(y)]])
         # ##############################################################################
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        Z,C_final_smooth = kdepy_fftkde(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
+        Z = kdepy_fftkde(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
+        C_final_smooth = find_MAP_kde(Z, C_limits[0], C_limits[1])
         grid = np.linspace(C_limits[0]-1e-10, C_limits[1]+1e-10, num_bin_kde+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)
@@ -126,7 +127,8 @@ def main(args):
         np.savetxt(os.path.join(folder, 'reg_limits'), limits)
         num_bin_kde_reg = 20
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde_reg))
-        Z, C_final_smooth = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        Z = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        C_final_smooth = find_MAP_kde(Z, [limits[:, 0]], [limits[:, 1]])
         grid = np.linspace(limits[0, 0]-1e-10, limits[0, 1]+1e-10, num_bin_kde_reg+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)
@@ -153,7 +155,8 @@ def main(args):
         np.savetxt(os.path.join(folder, 'reg_limits'), limits)
         num_bin_kde_reg = 20
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde_reg))
-        Z, C_final_smooth = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        Z = kdepy_fftkde(new_samples, [limits[:, 0]], [limits[:, 1]], num_bin_kde_reg)
+        C_final_smooth = find_MAP_kde(Z, [limits[:, 0]], [limits[:, 1]])
         grid = np.linspace(limits[0, 0]-1e-10, limits[0, 1]+1e-10, num_bin_kde_reg+1)
         # Z, C_final_smooth = gaussian_kde_scipy(abc_accepted, [C_limits[0]], [C_limits[1]], num_bin_kde)
         # grid = np.linspace(C_limits[0], C_limits[1], num_bin_kde+1)

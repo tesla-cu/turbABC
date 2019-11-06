@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from sklearn.metrics import r2_score
+# from sklearn.metrics import r2_score
 import postprocess.regression as regression
 import matplotlib as mpl
 mpl.use('pdf')
@@ -139,7 +139,7 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
             axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
             axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
             axarr[i].set_xlabel(params_names[i])
-            # axarr[i].set_xlim(C_limits[i])
+            axarr[i].set_xlim(C_limits[i])
     fig.subplots_adjust(left=0.05, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
 
     plt.legend(labels, ncol=3, loc='upper center',
@@ -618,8 +618,8 @@ def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
         print(full_true[4])
         y = line(i, x)
         R = regression.calc_r2_score(c[:, 0], line(i, new))
-        R1 = r2_score(c[:, 0], line(i, new))
-        print('R', i, R, R1)
+        # R1 = r2_score(c[:, 0], line(i, new))
+        # print('R', i, R, R1)
         fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
         ax = plt.axes()
         ax.scatter(new, c, marker=".", color='blue')

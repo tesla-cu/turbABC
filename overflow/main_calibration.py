@@ -20,6 +20,7 @@ def calibration_loop(overflow, job_folder, c_array):
         with open(os.path.join(job_folder, 'result.dat'), 'a+') as f:
             logging.info('{} {}'.format(i, c))
             result = work_function(overflow, c, i)
+            logging.info('{} {}'.format(i, result))
             f.write('{}\n'.format(result))
     end = time()
     timer(start, end, 'Time ')
@@ -29,17 +30,14 @@ def calibration_loop(overflow, job_folder, c_array):
 def main():
 
     n_job = int(sys.argv[1])
-    restart = 0
-    if len(sys.argv) > 2:
-        restart = 1
-
-    N_proc = 1
+    N_proc = 1     # number of processors to run overflow
 
     basefolder = './'
     output_folder = '../output'
     data_folder = os.path.join(basefolder, 'valid_data', )
     job_folder = os.path.join(output_folder, 'calibration_job{}'.format(n_job))
-    exe_dir = '/nobackup/odoronin/over2.2n/'
+    # exe_dir = '/nobackup/odoronin/over2.2n/'
+    exe_dir = os.path.join(basefolder, 'data_extraction', )
 
     logPath = job_folder
     logging.basicConfig(
@@ -48,9 +46,16 @@ def main():
         level=logging.DEBUG)
     ################################################################################
     c_array = np.loadtxt(os.path.join(job_folder, 'c_array_{}'.format(n_job)))
-    if restart:
-        done = len(np.load(os.path.join(job_folder, 'results.dat')))
+    result_file = os.path.join(job_folder, 'result.dat')
+    logging.info(result_file)
+    logging.info(os.path.exists(result_file))
+
+    if os.path.exists(result_file):
+        with open(result_file) as f:
+            done = len(f.readlines())
+        logging.info('Restart from {} (total {})'.format(done, len(c_array)))
         c_array = c_array[done:]
+
 
     overflow = Overflow(job_folder, data_folder, exe_dir, N_proc)
     g.job_folder = job_folder

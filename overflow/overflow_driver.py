@@ -1,8 +1,10 @@
 import os
-import subprocess
+import subprocess as sp
 import logging
 from scipy.io import FortranFile
 import numpy as np
+from time import time
+from pyabc.utils import timer
 
 
 class Overflow(object):
@@ -18,26 +20,20 @@ class Overflow(object):
     def write_inputfile(self, c):
         self.input_lines[7] = '    OD_BETAST = {}, OD_BETA1 = {}, OD_BETA2 = {}, OD_SIGW1 = {},\n'.format(c[0], c[1], c[2], c[3])
         self.input_lines[8] = '    OD_A1 = {},\n'.format(c[4])
-
         with open(os.path.join(self.job_folder, 'over.namelist'), 'w') as f:
             f.writelines(self.input_lines)
 
     def run_overflow(self, i):
-        exe = os.path.join(self.exe_path, 'overflowmpi')
+        exe = os.path.join(self.exe_path, 'a.out')
         outfile = os.path.join(self.job_folder, 'over.out')
-        # cp = os.path.join(self.basefolder, 'cp')
-
         # Run overflow
-        with open(outfile, 'w', 8) as f:
-            logging.info(['mpiexec', '-n', str(self.MPI_NP), exe])
-            subprocess.Popen(['mpiexec', '-n', str(self.MPI_NP), exe],
-                             cwd=self.job_folder, env=self.env, stdout=f, stderr=f).wait()
-
-        # data = os.path.join(self.basefolder, 'pratio.dat.{}'.format(i))
-        # with open(data, 'w', 8) as f:
-        #     logging.info([cp])
-        #     subprocess.Popen([cp], cwd=self.basefolder, env=self.env, stdout=f).wait()
-
+        time_start = time()
+        args = ['mpiexec', '-np', str(self.MPI_NP), '-d', self.job_folder, exe]
+        logging.info(args)
+        with open(outfile, 'wb', 8) as f:
+            sp.Popen(args, cwd=self.job_folder, env=self.env, stdout=f, stderr=f).wait()
+        time_end = time()
+        timer(time_start, time_end, 'Overflow time')
         return
 
     @staticmethod
