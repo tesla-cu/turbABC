@@ -18,7 +18,7 @@ C_limits = [[0.07, 0.11],   # beta_st
             # [0.31, 0.40],       # a1
 
 # if need to add points in the end of file
-add = 0
+add = 1
 N_per_dim2 = 14
 C_limits2 = [[0.054, 0.11],   # beta_st
              [0.3, 0.86],         # sigma_w1
@@ -70,7 +70,8 @@ def main():
         C_array2 = sampling_uniform_grid(N_per_dim2, C_limits2)
         C_array_add = []
         for c in C_array2:
-            if not (c[0] > 0.07 and c[1] < 0.7 and 0.055 < c[2] < 0.09 and c[3] > 0.05):
+            bool_inside = True in np.logical_and(np.array(C_limits)[:, 0] < c, c < np.array(C_limits)[:, 1])
+            if not bool_inside:
                 C_array_add.append(c)
         N_total += len(C_array_add)
         N = calc_N(N_total, N_jobs)
