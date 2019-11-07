@@ -41,13 +41,24 @@ def abc_classic(C_array):
     return
 
 
-def calibration(algorithm_input, C_limits):
+###########################################################
+#   CALIBRATION
+###########################################################
+def two_calibrations(algorithm_input, C_limits):
 
-    N_params = len(C_limits)
+    S_init = calibration_loop(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][0])
+    C_limits = calibration_postprocess1(S_init, algorithm_input['x'][0], algorithm_input['phi'], C_limits)
+    S_init = calibration_loop(sampling, C_limits, algorithm_input['N_calibration'][1])
+    calibration_postprocess2(S_init, algorithm_input['x'][1], algorithm_input['phi'], C_limits)
+    if algorithm_input['prior_update']:
+        update_prior(S_init, C_limits, algorithm_input['prior_update'])
+
+
+def calibration_loop(sampling, C_limits, N_calibration):
+
     work_function = workfunc_rans.define_work_function()
-    x = algorithm_input['x']
-    logging.info('Sampling {}'.format(algorithm_input['sampling']))
-    C_array = sampling(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][0])
+    logging.info('Sampling {}'.format(sampling))
+    C_array = sampling(sampling, C_limits, N_calibration)
     logging.info('Calibration step 1 with {} samples'.format(len(C_array)))
 
     start_calibration = time()
@@ -55,11 +66,14 @@ def calibration(algorithm_input, C_limits):
     S_init = g.par_process.get_results()
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
-    logging.debug('After Calibration 1: Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
+    logging.debug('After Calibration: Number of inf = ', np.sum(np.isinf(np.array(S_init)[:, -1])))
+    return S_init
 
+
+def calibration_postprocess1(S_init, x, phi, C_limits):
+    N_params = len(C_limits)
     # Define epsilon
-
-    eps = utils.define_eps(S_init, x[0])
+    eps = utils.define_eps(S_init, x)
     S_init = np.array(S_init)
     logging.info('eps after calibration1 step = {}'.format(eps))
     np.savetxt(os.path.join(g.path['calibration'], 'eps1'), [eps])
@@ -70,22 +84,16 @@ def calibration(algorithm_input, C_limits):
     for i in range(N_params):
         max_S = np.max(S_init[:, i])
         min_S = np.min(S_init[:, i])
-        half_length = algorithm_input['phi'] * (max_S - min_S) / 2.0
+        half_length = phi * (max_S - min_S) / 2.0
         middle = (max_S + min_S) / 2.0
         g.C_limits[i] = np.array([middle - half_length, middle + half_length])
     logging.info('New parameters range after calibration step:\n{}'.format(g.C_limits))
     np.savetxt(os.path.join(g.path['calibration'], 'C_limits'), g.C_limits)
+    return g.C_limits
 
-    # Second calibration step
-    logging.info('Sampling {}'.format(algorithm_input['sampling']))
-    C_array = sampling(algorithm_input['sampling'], g.C_limits, algorithm_input['N_calibration'][1])
-    logging.info('Calibration step 2 with {} samples'.format(len(C_array)))
-    start_calibration = time()
-    g.par_process.run(func=work_function, tasks=C_array)
-    S_init = g.par_process.get_results()
-    end_calibration = time()
-    utils.timer(start_calibration, end_calibration, 'Time of calibration step 2')
 
+def calibration_postprocess2(S_init, x, phi, C_limits):
+    N_params = len(C_limits)
     # Define epsilon again
     g.eps = utils.define_eps(S_init, x[1])
     S_init = np.array(S_init)
@@ -96,7 +104,7 @@ def calibration(algorithm_input, C_limits):
 
     # Define std
     S_init = S_init[np.where(S_init[:, -1] < g.eps)]
-    g.std = algorithm_input['phi']*np.std(S_init[:, :N_params], axis=0)
+    g.std = phi*np.std(S_init[:, :N_params], axis=0)
     logging.info('std for each parameter after calibration step:{}'.format(g.std))
     np.savetxt(os.path.join(g.path['calibration'], 'std'), [g.std])
     for i, std in enumerate(g.std):
@@ -105,28 +113,35 @@ def calibration(algorithm_input, C_limits):
             logging.warning('Artificially added std! Consider increasing number of samples for calibration step')
             logging.warning('new std for each parameter after calibration step:{}'.format(g.std))
 
-    # update prior based on accepted parameters in calibration
-    if algorithm_input['prior_update']:
-        prior, C_calibration = utils.gaussian_kde_scipy(data=S_init[:, :N_params],
-                                                        a=g.C_limits[:, 0],
-                                                        b=g.C_limits[:, 1],
-                                                        num_bin_joint=algorithm_input['prior_update'])
-        logging.info('Estimated parameter after calibration step is {}'.format(C_calibration))
-        np.savez(os.path.join(g.path['calibration'], 'prior.npz'), Z=prior)
-        np.savetxt(os.path.join(g.path['calibration'], 'C_final_smooth'), C_calibration)
-        prior_grid = np.empty((N_params, algorithm_input['prior_update']+1))
-        for i, limits in enumerate(g.C_limits):
-            prior_grid[i] = np.linspace(limits[0], limits[1], algorithm_input['prior_update']+1)
-        g.prior_interpolator = RegularGridInterpolator(prior_grid, prior, bounds_error=False)
-
     # Randomly choose starting points for Markov chains
     C_start = (S_init[np.random.choice(S_init.shape[0], g.par_process.proc, replace=False), :N_params])
     np.set_printoptions(precision=3)
     logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
     np.savetxt(os.path.join(g.path['output'], 'C_start'), C_start)
+
     return
 
 
+def update_prior(S_init, C_limits, num_bin_update):
+    # update prior based on accepted parameters in calibration
+    N_params = len(C_limits)
+    prior, C_calibration = utils.gaussian_kde_scipy(data=S_init[:, :N_params],
+                                                    a=C_limits[:, 0],
+                                                    b=C_limits[:, 1],
+                                                    num_bin_joint=num_bin_update)
+    logging.info('Estimated parameter after calibration step is {}'.format(C_calibration))
+    np.savez(os.path.join(g.path['calibration'], 'prior.npz'), Z=prior)
+    np.savetxt(os.path.join(g.path['calibration'], 'C_final_smooth'), C_calibration)
+    prior_grid = np.empty((N_params, num_bin_update+1))
+    for i, limits in enumerate(g.C_limits):
+        prior_grid[i] = np.linspace(limits[0], limits[1], num_bin_update+1)
+    g.prior_interpolator = RegularGridInterpolator(prior_grid, prior, bounds_error=False)
+    return
+
+
+###########################################################
+#   CHAINS
+###########################################################
 def mcmc_chains(n_chains):
 
     start = time()
