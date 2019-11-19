@@ -17,11 +17,25 @@ def calibration_loop(overflow, job_folder, c_array):
     start = time()
 
     for i, c in enumerate(c_array):
-        with open(os.path.join(job_folder, 'result.dat'), 'a+') as f:
-            logging.info('{} {}'.format(i, c))
-            result = work_function(overflow, c, i)
-            logging.info('{} {}'.format(i, result))
-            f.write('{}\n'.format(result))
+        result_file = open(os.path.join(job_folder, 'result.dat'), 'a+')
+        cp_file = open(os.path.join(job_folder, 'cp_all.bin'), 'ab')
+        u_file = open(os.path.join(job_folder, 'u_slice.bin'), 'ab')
+        uv_file = open(os.path.join(job_folder, 'uv_slice.bin'), 'ab')
+
+        logging.info('{} {}'.format(i, c))
+        result, cp, u, uv = work_function(overflow, c, i)
+        # logging.info('{} {}'.format(i, result))
+        result_file.write('{}\n'.format(result))
+        cp_file.write(bytearray(cp))
+        u_file.write(bytearray(u))
+        uv_file.write(bytearray(uv))
+
+        result_file.close()
+        cp_file.close()
+        u_file.close()
+        uv_file.close()
+
+
     end = time()
     timer(start, end, 'Time ')
     return
@@ -29,7 +43,8 @@ def calibration_loop(overflow, job_folder, c_array):
 
 def main():
 
-    n_job = int(sys.argv[1])
+    if not sys.argv[1] == 'nominal':
+        n_job = int(sys.argv[1])
     N_proc = 1     # number of processors to run overflow
 
     basefolder = './'

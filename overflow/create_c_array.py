@@ -7,9 +7,10 @@ import itertools
 basefolder = '../output/'
 N_params = 4
 N_per_dim = 10
-N_jobs = 15
+N_jobs = 35
 
-C_nominal = [0.09, 0.5, 0.09/1.2, 0.09/1.0870, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
+C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
+# np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
 
 C_limits = [[0.07, 0.11],   # beta_st
             [0.3, 0.7],         # sigma_w1
@@ -18,7 +19,7 @@ C_limits = [[0.07, 0.11],   # beta_st
             # [0.31, 0.40],       # a1
 
 # if need to add points in the end of file
-add = 1
+add = 0
 N_per_dim2 = 14
 C_limits2 = [[0.054, 0.11],   # beta_st
              [0.3, 0.86],         # sigma_w1

@@ -2,6 +2,7 @@ import os
 import subprocess as sp
 import logging
 from scipy.io import FortranFile
+from scipy import interpolate
 import numpy as np
 from time import time
 from pyabc.utils import timer
@@ -18,7 +19,7 @@ class Overflow(object):
             self.input_lines = file_template.readlines()
 
     def write_inputfile(self, c):
-        self.input_lines[7] = '    OD_BETAST = {}, OD_BETA1 = {}, OD_BETA2 = {}, OD_SIGW1 = {},\n'.format(c[0], c[1], c[2], c[3])
+        self.input_lines[7] = '    OD_BETAST = {}, OD_BETA1 = {}, OD_BETA2 = {}, OD_SIGW1 = {},\n'.format(c[0], c[2], c[3], c[1])
         self.input_lines[8] = '    OD_A1 = {},\n'.format(c[4])
         with open(os.path.join(self.job_folder, 'over.namelist'), 'w') as f:
             f.writelines(self.input_lines)
@@ -37,7 +38,7 @@ class Overflow(object):
         return
 
     @staticmethod
-    def read_data_from_overflow(job_folder, grid, indices):
+    def read_data_from_overflow(job_folder, grid, x_slices, y_slices):
         ########################################################################
         # Read data
         ########################################################################
@@ -51,7 +52,9 @@ class Overflow(object):
         data = f.read_reals(dtype=np.float64).reshape((nq, ld, kd, jd))
         data = data[:, :, 1, :]  # taking 2D data (middle in y direction)
         ###################
-        u = np.rollaxis(data[1] / data[0], 1)
+        u = np.rollaxis(data[1] / data[0] / fm, 1)
+
+        v = np.rollaxis(data[2] / data[0] / fm, 1)
         ###################
         surface_data = data[:, 0, :]
         v2 = 0.5 * (surface_data[1] ** 2 + surface_data[2] ** 2 + surface_data[3] ** 2) / surface_data[0]
@@ -59,9 +62,24 @@ class Overflow(object):
         cp = (p - 1.0 / surface_data[5]) / (0.5 * fm * fm)
         ###################
         x_grid, y_grid = grid
+
+        # x_grid
         dUdy = np.empty((jd, ld))
+        dVdx = np.empty((jd, ld))
         for j in range(jd):
             dUdy[j] = np.gradient(u[j], y_grid[j])
-        uv = np.rollaxis(data[6] / data[7], 1) * dUdy
-        return cp, u[indices], uv[indices]
+        for l in range(ld):
+            dVdx[:, l] = np.gradient(v[:, l], x_grid[:, l])
+        uv = np.rollaxis(data[6] / data[7], 1) * (dUdy + dVdx)
+
+        y_grid = y_grid - y_grid[:, 0].reshape(-1, 1)
+        xy_grid = np.hstack((x_grid.flatten().reshape(-1, 1), y_grid.flatten().reshape(-1, 1)))
+        # interpolate in experimental points only
+        u_interp = interpolate.griddata(xy_grid, u.flatten(), x_slices, method='cubic')
+        uv_interp = interpolate.griddata(xy_grid, uv.flatten(), x_slices, method='cubic')
+        # interpolate in the x slice, where experiment is taken
+        u_interp_slice = interpolate.griddata(xy_grid, u.flatten(), y_slices, method='cubic')
+        uv_interp_slice = interpolate.griddata(xy_grid, uv.flatten(), y_slices, method='cubic')
+        return cp, u_interp, uv_interp, u_interp_slice, uv_interp_slice
+        # return cp, u_interp[indices], uv_interp[indices]
 

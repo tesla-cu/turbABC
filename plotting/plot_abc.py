@@ -4,8 +4,8 @@ import glob
 # import matplotlib as mpl
 # mpl.use('pdf')
 import numpy as np
-import plotting
-import plot_compare_truth
+import plotting_2Dmarginals
+# import plot_compare_truth
 
 
 def main():
@@ -35,14 +35,14 @@ def main():
         # plot_compare_truth.plot_periodic(c, plot_folder)
         # plot_compare_truth.plot_decay(c, plot_folder)
         # plot_compare_truth.plot_strained(c, plot_folder)
-        plotting.plot_marginal_raw_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
-        plotting.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
+        # plotting.plot_marginal_raw_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
+        plotting_2Dmarginals.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
     ###################################################################################################################
-    print("Plot change of marginal pdfs for different epsilon")
-    plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, path['plots'])
+    # print("Plot change of marginal pdfs for different epsilon")
+    # plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, path['plots'])
     # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
     # plotting.plot_eps_change(folders, path['plots'])
-    folder_reg = os.path.join(path['output'], 'regression_full/x_30.0')
+    # folder_reg = os.path.join(path['output'], 'regression_full/x_30.0')
     # plotting.plot_marginal_change_with_regression(folders, folder_reg, params_names, C_limits, num_bin_kde, path['plots'])
     ###################################################################################################################
 

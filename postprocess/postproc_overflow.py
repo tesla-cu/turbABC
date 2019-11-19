@@ -29,14 +29,13 @@ def main():
     C_limits = np.array([[0.07, 0.11],   # beta_st
                          [0.3, 0.7],         # sigma_w1
                          [0.055, 0.09],       # beta1
-                         [0.05, 0.135]])
+                         [0.05, 0.135]])    # beta2
     np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
     N_params = len(C_limits)
     folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(15)]
 
     Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv'])
     sumstat_true = Truth.sumstat_true
-
     logging.info('Loading data')
     result = np.empty((0, len(sumstat_true)+5+1))
     N_total = 0
@@ -49,16 +48,15 @@ def main():
                 result = np.vstack((result, d))
         if N_total != len(result):
             print('Job {} did not finish ({} out of {})'.format(i, len(result), N_total))
-            exit()
     print(N_total, len(result))
     # all statistics
-    # dist = result[:, -1]
+    dist = result[:, -1]
     # cp statistics
-    dist = np.empty(N_total)
-    for i, line in enumerate(result[:, 5:-1]):
-        # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
-        # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 1])
-        dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], Truth.uv_flat[:, 1])
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
+    #     # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 1])
+    #     dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], Truth.uv_flat[:, 1])
     ind = np.argsort(dist)
     ####################################################################################################################
     #
