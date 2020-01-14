@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import plotting
-import plot_compare_truth
+import plot_compare_truth_ransode
 
 
 def plot_MAP_comparison(data_folders, data_folders_reg, plot_folder, C_limits):
@@ -111,10 +111,10 @@ def main():
             print("Plot comparison with true data and kde 2D marginals")
             c = np.array([np.loadtxt(os.path.join(folder, 'C_final_smooth')), 0.8, 1.44, 1.92])
             print("C_MAP = ", c)
-            plot_compare_truth.plot_impulsive(c, reg_plot_folder)
-            plot_compare_truth.plot_periodic(c, reg_plot_folder)
-            plot_compare_truth.plot_decay(c, reg_plot_folder)
-            plot_compare_truth.plot_strained(c, reg_plot_folder)
+            plot_compare_truth_ransode.plot_impulsive(c, reg_plot_folder)
+            plot_compare_truth_ransode.plot_periodic(c, reg_plot_folder)
+            plot_compare_truth_ransode.plot_decay(c, reg_plot_folder)
+            plot_compare_truth_ransode.plot_strained(c, reg_plot_folder)
         print("Plot change of marginal pdfs for different epsilon")
         plotting.plot_1d_pdf_change(folders, params_names, C_limits, num_bin_kde_reg, plot_folder)
         folders2 = folders

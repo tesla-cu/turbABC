@@ -10,9 +10,9 @@ import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 import matplotlib.colors as colors
 from rans_ode.sumstat import TruthData
-# plt.style.use('dark_background')
+plt.style.use('dark_background')
 
-mpl.rcParams['font.size'] = 11
+mpl.rcParams['font.size'] = 12
 mpl.rcParams['axes.titlesize'] = 1 * plt.rcParams['font.size']
 mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
 mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
@@ -51,7 +51,8 @@ def plot_1d_pdf_change(data_folders, params_names, C_limits, num_bin_kde, plot_f
     # colormap = plt.cm.gist_ncar
 
     labels = []
-    fig = plt.figure(figsize=(0.65*fig_width, 0.7*fig_height))
+    fig_width, fig_height = fig_size(single_column)
+    fig = plt.figure(figsize=(fig_width, fig_height))
     ax = plt.gca()
     colors = ['k', 'g', 'b', 'y', 'm', 'orange']
     # ax.set_color_cycle([colormap(i) for i in np.linspace(0, 1, len(data_folders))])
@@ -119,13 +120,16 @@ def plot_marginal_change_with_regression(data_folders, folder_reg, params_names,
     plt.close('all')
 
 
-def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder):
+def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder, nominal_values=None):
 
     N_params = len(params_names)
     colormap = plt.cm.gist_ncar
     plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     labels = []
+    fig_width, fig_height = fig_size(oneandhalf_column)
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
+    axarr[0].yaxis.set_major_formatter(plt.NullFormatter())
+    axarr[0].yaxis.set_major_locator(plt.NullLocator())
     for folder in data_folders:
         x = os.path.basename(os.path.normpath(folder))[2:]
         MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
@@ -137,15 +141,16 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
                 MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
                 axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
             axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
-            axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
+            # if nominal_values:
+            #     axarr[i].axvline(nominal_values[i], color='b', linestyle='--', zorder=0)
             axarr[i].set_xlabel(params_names[i])
             axarr[i].set_xlim(C_limits[i])
     fig.subplots_adjust(left=0.05, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
 
     plt.legend(labels, ncol=3, loc='upper center',
-               bbox_to_anchor=[-0.6, 1.3], labelspacing=0.0,
+               bbox_to_anchor=[-1.0, 1.35], labelspacing=0.0,
                handletextpad=0.5, handlelength=1.5,
-               fancybox=True, shadow=True)
+               fancybox=False, shadow=False, frameon=False)
 
     # custom_lines = [Line2D([0], [0], color=colors[0], lw=1),
     #                 Line2D([0], [0], color=colors[1], linestyle='-', lw=1),
@@ -162,6 +167,7 @@ def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits
     N_params = len(params_names)
     colormap = plt.cm.gist_ncar
     plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
+    fig_width, fig_height = fig_size(oneandhalf_column)
     fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.7 * fig_height))
     MAP = []
     # np.empty((len(data_folders), N_params))
@@ -314,6 +320,7 @@ def plot_marginal_raw_pdf(data_folder, C_limits, num_bin_joint, params_names, pl
 
 def plot_dist_pdf(path, dist, x):
 
+    fig_width, fig_height = fig_size(oneandhalf_column)
     fig = plt.figure(figsize=(fig_width, fig_height))
     ax = plt.gca()
     ax.hist(dist, bins=100, alpha=0.8)
@@ -323,9 +330,18 @@ def plot_dist_pdf(path, dist, x):
     ax.set_xlabel(r'$\rho$')
     ax.set_ylabel(r'pdf($\rho$)')
     fig.subplots_adjust(left=0.2, right=0.98, bottom=0.2, top=0.95)
-    fig.savefig(os.path.join(path['plots'], 'dist'))
+    fig.savefig(os.path.join(path, 'dist'))
     plt.close('all')
     return eps
+
+def plot_results(truth, results, path, name):
+    fig_width, fig_height = fig_size(oneandhalf_column)
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    ax = plt.gca()
+    ax.plot(truth, 'r')
+    ax.plot(results)
+    fig.savefig(os.path.join(path, name))
+    plt.close('all')
 
 
 def plot_bootstrapping_pdf(path, dist, x, i, C_limit, C_final):
@@ -438,7 +454,8 @@ def plot_prior(params_names, C_limits, data_folder, plot_folder):
 
 def plot_1d_dist_scatter(data, C_limits, params_name, x_list, eps_list, plot_folder):
 
-    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    fig_width, fig_height = fig_size(single_column)
+    fig = plt.figure(figsize=(fig_width, fig_width))
     ax = plt.axes()
     colors = ['r', 'g', 'k', 'y', 'm', 'orange' ]
     ax.axis(xmin=C_limits[0], xmax=C_limits[1], ymax=1.005 * np.max(eps_list), ymin=0.98 * np.min(eps_list))
@@ -455,8 +472,8 @@ def plot_1d_dist_scatter(data, C_limits, params_name, x_list, eps_list, plot_fol
 
 
 def plot_sampling_hist(samples, C_limits, params_name, plot_folder):
-
-    fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+    fig_width, fig_height = fig_size(single_column)
+    fig = plt.figure(figsize=(fig_width, fig_width))
     ax = plt.axes()
     ax.hist(samples, range=C_limits, alpha=0.6)
     ax.set_xlabel(params_name)
@@ -481,22 +498,23 @@ def plot_regression(c, sum_stat, dist, solution, params_name, plot_folder):
         R = regression.calc_r2_score(c[:, 0], line(i, new))
         # R1 = r2_score(c[:, 0], line(i, new))
         # print('R', i, R, R1)
-        fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
+        fig_width, fig_height = fig_size(single_column)
+        fig = plt.figure(figsize=(fig_width, 1.1*fig_height))
         ax = plt.axes()
-        ax.scatter(new, c, marker=".", color='blue')
+        ax.scatter(new, c, marker=".")
         ax.axvline(0)
-        ax.plot(x, y, color='k')
+        ax.plot(x, y, color='w')
         ax.set_ylabel(params_name)
         ax.set_xlabel(r'$\mathcal{S} - \mathcal{S}_{true}$')
         ax.set_title(r'Linear regression, $R^2 = {}$'.format(np.round(R, 3)))
-        fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.9)
+        fig.subplots_adjust(left=0.245, right=0.96, bottom=0.21, top=0.88)
         fig.savefig(os.path.join(plot_folder, 'regression_full{}'.format(i)))
 
         # plot residuals
         fig = plt.figure(figsize=(0.75 * fig_width, 0.5 * fig_width))
         ax = plt.axes()
-        ax.scatter(new, (c[:, 0] - line(i, new))/(np.max(c) - np.min(c)), marker=".", color='blue')
-        ax.axhline(0.0, color='k')
+        ax.scatter(new, (c[:, 0] - line(i, new))/(np.max(c) - np.min(c)), marker=".")
+        ax.axhline(0.0, color='w')
         ax.set_ylabel(params_name)
         ax.set_xlabel(r'$\mathcal{S} - \mathcal{S}_{true}$')
         ax.set_title('Linear regression')

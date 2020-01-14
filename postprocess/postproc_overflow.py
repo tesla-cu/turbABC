@@ -8,10 +8,23 @@ import postprocess.postprocess_func as pp
 from pyabc.kde import find_MAP_kde, kdepy_fftkde
 from pyabc.distance import calc_err_norm2
 from overflow.sumstat import TruthData, calc_sum_stat, GridData
-from overflow.overflow_driver import Overflow
-# import matplotlib as mpl
-# mpl.use('pdf')
+from plotting.plotting import plot_dist_pdf, plot_results
 import matplotlib.pyplot as plt
+
+
+N_jobs = 35
+
+
+def collect_MAP_values(output_folder, x_list, n_bin_smooth):
+    MAP = []
+    for x in x_list:
+        folder = os.path.join(output_folder, 'x_{}'.format(x * 100))
+        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(n_bin_smooth))))
+
+    MAP = np.hstack((np.array(MAP), np.ones(len(MAP)).reshape(-1, 1)*0.31))
+    np.savetxt(os.path.join(output_folder, 'MAP_values'), MAP)
+    return
+
 
 def main():
 
@@ -32,14 +45,16 @@ def main():
                          [0.05, 0.135]])    # beta2
     np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
     N_params = len(C_limits)
-    folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(15)]
+    folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(N_jobs)]
 
     Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv'])
     sumstat_true = Truth.sumstat_true
+
     logging.info('Loading data')
-    result = np.empty((0, len(sumstat_true)+5+1))
+    result = np.empty((0, len(sumstat_true)+5+1))  # 5 parameters in the beginning  and distance in the end
     N_total = 0
     for i, folder in enumerate(folders):
+        print('job {}'.format(i))
         N_total += len(np.loadtxt(os.path.join(folder, 'c_array_{}'.format(i))))
         with open(os.path.join(folder, 'result.dat')) as f:
             lines = f.readlines()
@@ -47,17 +62,22 @@ def main():
                 d = np.fromstring(line[1:-1], dtype=float, sep=',')
                 result = np.vstack((result, d))
         if N_total != len(result):
-            print('Job {} did not finish ({} out of {})'.format(i, len(result), N_total))
+            print('Job {} did not finish ({} out of {}), diff = {}'.format(i, len(result), N_total,
+                                                                           N_total-len(result)))
     print(N_total, len(result))
     # all statistics
-    dist = result[:, -1]
+    # dist = result[:, -1]
     # cp statistics
-    # dist = np.empty(N_total)
-    # for i, line in enumerate(result[:, 5:-1]):
-    #     # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
-    #     # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 1])
-    #     dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], Truth.uv_flat[:, 1])
+    dist = np.empty(N_total)
+    for i, line in enumerate(result[:, 5:-1]):
+        dist[i] = calc_err_norm2(line, Truth.sumstat_true)
+        # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
+        # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 0])
+        # dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], -Truth.uv_flat[:, 0])
+        # if i<10:
+        #     plot_results(-Truth.uv_flat[:, 0], line[Truth.length[1]:Truth.length[2]], path['output'], str(i))
     ind = np.argsort(dist)
+    plot_dist_pdf(path['output'], dist, 0.1)
     ####################################################################################################################
     #
     # ##################################################################################################################
@@ -71,7 +91,7 @@ def main():
             os.makedirs(folder)
         logging.info('\n')
         print(folder)
-        print('min dist = ', np.min(dist))
+        print('min dist = {} at {}'.format(np.min(dist), accepted[0]))
         accepted = accepted[:n, :N_params]
         dist = dist[:n]
         eps = np.max(dist)
@@ -91,6 +111,7 @@ def main():
         C_final_smooth = find_MAP_kde(Z, C_limits[:, 0], C_limits[:, 1])
         np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
         logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
+        # ##############################################################################
         np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
         Z = np.load(os.path.join(folder, 'Z.npz'))['Z']
         pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
@@ -100,6 +121,7 @@ def main():
             pp.marginal_confidence(N_params, folder, q)
             pp.marginal_confidence_joint(accepted, folder, q)
     del accepted, dist
+    collect_MAP_values(path['output'], x_list, num_bin_kde)
 
 
 if __name__ == '__main__':

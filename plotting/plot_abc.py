@@ -5,6 +5,7 @@ import glob
 # mpl.use('pdf')
 import numpy as np
 import plotting_2Dmarginals
+import plotting
 # import plot_compare_truth
 
 
@@ -39,7 +40,8 @@ def main():
         plotting_2Dmarginals.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder)
     ###################################################################################################################
     # print("Plot change of marginal pdfs for different epsilon")
-    # plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, path['plots'])
+    nominal_values = [0.09, 0.5, 0.075, 0.0828]
+    plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, path['plots'], nominal_values)
     # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
     # plotting.plot_eps_change(folders, path['plots'])
     # folder_reg = os.path.join(path['output'], 'regression_full/x_30.0')

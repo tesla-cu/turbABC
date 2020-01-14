@@ -9,7 +9,7 @@ import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 import matplotlib.colors as colors
 from rans_ode.sumstat import TruthData
-# plt.style.use('dark_background')
+plt.style.use('dark_background')
 
 
 
@@ -88,10 +88,10 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
     # gamma1 = 1
     # gamma2 = 1
     ###################################################################################################
-    # cmaplist[0] = 'black'  # 'white' # force the first color entry to be white
-    # cmaplist2[0] = 'black'  # 'white' # force the first color entry to be white
-    cmaplist[0] = 'white' # force the first color entry to be white
-    cmaplist2[0] = 'white'  # force the first color entry to be white
+    cmaplist[0] = 'black'  # 'white' # force the first color entry to be white
+    cmaplist2[0] = 'black'  # 'white' # force the first color entry to be white
+    # cmaplist[0] = 'white' # force the first color entry to be white
+    # cmaplist2[0] = 'white'  # force the first color entry to be white
     cmap = colors.LinearSegmentedColormap.from_list('Custom cmap', cmaplist)
     cmap2 = colors.LinearSegmentedColormap.from_list('Custom cmap', cmaplist2)
 

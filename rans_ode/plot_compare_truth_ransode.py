@@ -202,6 +202,8 @@ def plot_strained(c_array, plot_folder):
 
 
 def plot_experiment(plot_folder, indices=None):
+
+    # impulsive
     Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive')
     fig = plt.figure(figsize=(0.8 * fig_width, 1 * fig_height))
     ax = plt.gca()
@@ -233,5 +235,7 @@ def plot_experiment(plot_folder, indices=None):
     fig.subplots_adjust(left=0.15, right=0.98, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(plot_folder, 'impulsive_a'))
     plt.close('all')
+
+
 
 

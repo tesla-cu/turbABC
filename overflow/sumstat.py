@@ -16,7 +16,7 @@ class TruthData(object):
             self.length.append(len(self.sumstat_true))
         if 'uv' in case:
             self.x, self.uv_flat, self.uv = readfile_with_zones(os.path.join(valid_folder, 'experiment_uv.txt'))
-            self.sumstat_true = np.hstack((self.sumstat_true, self.uv_flat[:, 0]))
+            self.sumstat_true = np.hstack((self.sumstat_true, -self.uv_flat[:, 0]))
             self.length.append(len(self.sumstat_true))
 
 

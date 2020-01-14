@@ -128,7 +128,6 @@ class StrainTensor(object):
         self.pure_shear = self.create_pure_shear()
         self.plane_strain = self.create_plane_strain()
 
-
     @staticmethod
     def create_axisymmetric_expansion():
         S = np.zeros(6)

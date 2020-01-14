@@ -83,3 +83,48 @@ class Overflow(object):
         return cp, u_interp, uv_interp, u_interp_slice, uv_interp_slice
         # return cp, u_interp[indices], uv_interp[indices]
 
+    @staticmethod
+    def calc_mut_from_overflow(job_folder, grid):
+        ########################################################################
+        # Read data
+        ########################################################################
+        f = FortranFile(os.path.join(job_folder, 'q.save'), 'r')
+        f.read_ints(np.int32)[0]  # ng: number of geometries
+        (jd, kd, ld, nq, nqc) = tuple(f.read_ints(np.int32))
+        type = np.array([np.dtype('<f8')] * 16)
+        type[7] = np.dtype('<i4')
+        (fm, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = tuple(f.read_record(*type))
+        # fm, a, re, t, gamma, beta, tinf, igamma, htinf, ht1, ht2, rgas1, rgas2, refmach, tvref, dtvref))
+        data = f.read_reals(dtype=np.float64).reshape((nq, ld, kd, jd))
+        data = data[:, :, 1, :]  # taking 2D data (middle in y direction)
+        ###################
+        u = np.rollaxis(data[1] / data[0] / fm, 1)
+        v = np.rollaxis(data[2] / data[0] / fm, 1)
+        ###################
+        x_grid, y_grid = grid
+        dUdy = np.empty((jd, ld))
+        for j in range(jd):
+            dUdy[j] = np.gradient(u[j], y_grid[j])
+        omega = np.rollaxis(data[7], 1)
+        print(dUdy.shape, omega.shape, y_grid.shape)
+        print(np.sum(dUdy > 0.31*omega))
+        rows, cols = np.where(dUdy > 0.31*omega)
+        print(rows.shape, cols.shape)
+        print(rows)
+        print(y_grid[np.where(dUdy > 0.31*omega)].shape)
+
+        # dVdx = np.empty((jd, ld))
+        # for l in range(ld):
+        #     dVdx[:, l] = np.gradient(v[:, l], x_grid[:, l])
+        # uv = np.rollaxis(data[6] / data[7], 1) * (dUdy + dVdx)
+
+        # y_grid = y_grid - y_grid[:, 0].reshape(-1, 1)
+        # xy_grid = np.hstack((x_grid.flatten().reshape(-1, 1), y_grid.flatten().reshape(-1, 1)))
+        # # interpolate in experimental points only
+        # u_interp = interpolate.griddata(xy_grid, u.flatten(), x_slices, method='cubic')
+        # uv_interp = interpolate.griddata(xy_grid, uv.flatten(), x_slices, method='cubic')
+        # # interpolate in the x slice, where experiment is taken
+        # u_interp_slice = interpolate.griddata(xy_grid, u.flatten(), y_slices, method='cubic')
+        # uv_interp_slice = interpolate.griddata(xy_grid, uv.flatten(), y_slices, method='cubic')
+        return
+
