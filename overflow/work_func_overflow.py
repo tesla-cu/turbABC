@@ -22,6 +22,6 @@ def work_function(overflow, c, i):
     cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
     sum_stat_cp = calc_sum_stat(g.Grid.grid_x[::-1], cp[::-1], g.Truth.cp[:, 0])
     sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv))
-    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    err = calc_err(sum_stat/g.Truth.norm, g.Truth.sumstat_true)
     result = np.hstack((c, sum_stat, err)).tolist()
     return result, cp, u_slice, uv_slice

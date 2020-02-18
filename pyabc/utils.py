@@ -12,10 +12,18 @@ def timer(start, end, label):
 
 
 def take_safe_log10(x):
-    """Takes natural logarithm and put g.TINY number where x = 0"""
+    """Takes logarithm with base 10 and put g.TINY number where x = 0"""
     log_fill = np.empty_like(x)
     log_fill.fill(g.TINY_log)
     log = np.log10(x, out=log_fill, where=x > g.TINY)
+    return log
+
+
+def take_safe_log(x):
+    """Takes natural logarithm and put g.TINY number where x = 0"""
+    log_fill = np.empty_like(x)
+    log_fill.fill(g.TINY_log)
+    log = np.log(x, out=log_fill, where=x > g.TINY)
     return log
 
 
@@ -28,9 +36,12 @@ def check_output_size(N, N_params, sumstat_size):
 
 
 def define_eps(array, x):
-
-    array.sort(key=lambda y: y[-1])
-    array = np.array(array)
+    if isinstance(array, np.ndarray):
+        ind = np.argsort(array[:, -1])
+        array = array[ind]
+    elif isinstance(array, list):
+        array.sort(key=lambda y: y[-1])
+        array = np.array(array)
     eps = np.percentile(array, q=x*100, axis=0)[-1]
     return eps
 
