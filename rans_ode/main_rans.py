@@ -3,7 +3,7 @@ import sys
 import logging
 import yaml
 import numpy as np
-sys.path.append('/Users/olgadorr/Research/ABC_RANS')
+sys.path.append('/Users/olgadorr/Research/ABC_MCMC')
 import pyabc.parallel as parallel
 import pyabc.abc_alg as abc_alg
 import pyabc.glob_var as g
