@@ -1,0 +1,89 @@
+########################################################################################################################
+# Data
+data:
+  load: 1 # 0 = DNS, 1 = LES(and TEST), 2 = sparse, 3 = model
+  data_path: './ABC/data_input/JHU_data/'
+path:
+  'output': './ABC/output/'
+  'valid_data': './valid_data/'
+########################################################################################################################
+# Initial case parameters
+data_params:
+  N_point: 256
+  lx: 6.283185307179586   # domain size = 2*pi
+  homogeneous: True   # Use symmetry of tau tensor
+  LES_scale: 30     # in code will be 30/2/pi
+  TEST_scale: None
+                 # LES_scale = 10
+                 # TEST_scale = 5
+########################################################################################################################
+# Model parameters
+model:
+  order': 2          # order of eddy-viscosity model
+  N_params_force: 3
+########################################################################################################################
+sumstat_params:
+  bins: 100                 # for pdf comparison
+  domain:
+  - -0.3
+  - 0.3     # for sigma pdf comparison
+  domain_production:
+  - -5
+  - 5       # for production pdf comparison
+  distance: 'L2log'
+#  case: 'production_pdf_log' # 'production_mean' 'both_pdf_log'
+  sumstat: 'production_pdf_log'
+########################################################################################################################
+# abs algorithm
+abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
+num_training_points: 64
+random: 100000  # number of random points
+################################################################################################################
+# Define only one of the following
+################################################################################################################
+algorithm:
+  abc:
+      sampling: 'uniform'  # 'uniform', 'random', 'sobol'
+      N: 5000    # per dimension
+      N_params_in_task: 0  # only 0, 1 or 2  #only 0 and 2 for calibration
+  ############################################################################################################
+  abc_IMCMC:
+      # Calibration
+      sampling: 'uniform'     # 'uniform', 'random', 'sobol'
+      N_calibration:
+        - 6                  # recommended 10
+        - 6                  # recommended 10
+      x:
+        - 0.1                  # percent of accepted for calibration step 1
+        - 0.1                  # percent of accepted for calibration step 2
+      phi: 1
+      prior_update: 10          # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
+      # MCMC
+      N_per_chain: 500
+      t0: 100                  # burn-in period without kernel adaptation
+  ############################################################################################################
+  abc_MCMC_adaptive:
+      t0: 50
+      target_acceptance: 0.5
+      N_per_chain: 100
+  ############################################################################################################
+
+########################################################################################################################
+
+#######################################################################################################################
+C_limits:
+  - [-0.3, 0.0]
+  - [-0.5, 0.5]
+  - [-0.5, 0.2]
+  - [-0.2, 0.2]
+  - [-1, 1]
+  - [-0.5, 0.5]
+  - [-1, 1]
+  - [-1, 1]
+  - [-1, 1]
+  - [-1, 1]
+########################################################################################################################
+# Parallel regime parameters
+parallel_threads: 4          # Number of processes
+########################################################################################################################
+
