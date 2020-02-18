@@ -6,7 +6,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 import pyabc.utils as utils
 import pyabc.glob_var as g
-import workfunc_rans
+# import workfunc_rans
 
 
 def sampling(sampling, C_limits, N):
@@ -74,6 +74,7 @@ def calibration_postprocess1(S_init, x, phi, C_limits):
     N_params = len(C_limits)
     # Define epsilon
     eps = utils.define_eps(S_init, x)
+    print(eps)
     S_init = np.array(S_init)
     logging.info('eps after calibration1 step = {}'.format(eps))
     np.savetxt(os.path.join(g.path['calibration'], 'eps1'), [eps])

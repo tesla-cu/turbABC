@@ -141,11 +141,11 @@ def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot
                 MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
                 axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
             axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
-            # if nominal_values:
-            #     axarr[i].axvline(nominal_values[i], color='b', linestyle='--', zorder=0)
+            if nominal_values:
+                axarr[i].axvline(nominal_values[i], color='b', linestyle='--')
             axarr[i].set_xlabel(params_names[i])
             axarr[i].set_xlim(C_limits[i])
-    fig.subplots_adjust(left=0.05, right=0.98, wspace=0.05, hspace=0.1, bottom=0.2, top=0.8)
+    fig.subplots_adjust(left=0.02, right=0.98, wspace=0.06, hspace=0.1, bottom=0.18, top=0.82)
 
     plt.legend(labels, ncol=3, loc='upper center',
                bbox_to_anchor=[-1.0, 1.35], labelspacing=0.0,

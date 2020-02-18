@@ -1,16 +1,11 @@
 import logging
 import numpy as np
 import os
-import sys
-import glob
-import yaml
-import postprocess.postprocess_func as pp
+import pyabc.postprocess_func as pp
 from pyabc.kde import find_MAP_kde, kdepy_fftkde
 from pyabc.distance import calc_err_norm2
-from overflow.sumstat import TruthData, calc_sum_stat, GridData
-from plotting.plotting import plot_dist_pdf, plot_results
-import matplotlib.pyplot as plt
-
+from overflow.sumstat import TruthData
+from plotting.plotting import plot_dist_pdf
 
 N_jobs = 35
 
@@ -39,10 +34,10 @@ def main():
 
     logging.info('\n############# POSTPROCESSING ############')
     x_list = [0.3, 0.1, 0.05, 0.03, 0.01, 0.005]
-    C_limits = np.array([[0.07, 0.11],   # beta_st
-                         [0.3, 0.7],         # sigma_w1
-                         [0.055, 0.09],       # beta1
-                         [0.05, 0.135]])    # beta2
+    C_limits = np.array([[0.07, 0.11],  # beta_st
+                 [0.3, 0.82],  # sigma_w1
+                 [0.055, 0.1005],  # beta1
+                 [0.05, 0.135]])  # beta2
     np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
     N_params = len(C_limits)
     folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(N_jobs)]
@@ -70,7 +65,7 @@ def main():
     # cp statistics
     dist = np.empty(N_total)
     for i, line in enumerate(result[:, 5:-1]):
-        dist[i] = calc_err_norm2(line, Truth.sumstat_true)
+        dist[i] = calc_err_norm2(line/Truth.norm, Truth.sumstat_true)
         # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
         # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 0])
         # dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], -Truth.uv_flat[:, 0])

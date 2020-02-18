@@ -13,18 +13,18 @@ C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, be
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
 
 C_limits = [[0.07, 0.11],   # beta_st
-            [0.3, 0.7],         # sigma_w1
-            [0.055, 0.09],       # beta1
-            [0.05, 0.135]]       # beta2
+            [0.3, 0.9],         # sigma_w1
+            [0.055, 0.12],       # beta1
+            [0.05, 0.18]]       # beta2
             # [0.31, 0.40],       # a1
 
 # if need to add points in the end of file
 add = 0
-N_per_dim2 = 14
-C_limits2 = [[0.054, 0.11],   # beta_st
-             [0.3, 0.86],         # sigma_w1
-             [0.041, 0.09],       # beta1
-             [0.016, 0.135]]       # beta2
+N_per_dim2 = [10, 13, 13, 14]
+C_limits2 = [[0.07, 0.11],   # beta_st
+             [0.3, 0.82],         # sigma_w1
+             [0.055, 0.1005],       # beta1
+             [0.05, 0.165]]       # beta2
 
 
 def sampling_uniform_grid(N_each, C_limits):
@@ -32,13 +32,16 @@ def sampling_uniform_grid(N_each, C_limits):
     :return: list of lists of sampled parameters
     """
     N_params = len(C_limits)
-    C = np.empty((N_params, N_each))
+    if np.isscalar(N_each):
+        N_each = N_each*np.ones(N_params)
+    grid_x = [uniform_grid(C_limits[i], N_each[i]) for i in range(N_params)]
+    grid_mesh = np.meshgrid(*grid_x, indexing='ij')
+    grid_ravel = np.empty((N_params, np.prod(N_each, dtype=np.int32)))
     for i in range(N_params):
-        C[i, :] = uniform_grid(C_limits[i], N_each)
-    permutation = itertools.product(*C)
-    C_array = list(map(list, permutation))
-    logging.debug('Form C_array as uniform grid: {} samples\n'.format(len(C_array)))
-    return C_array
+        grid_ravel[i] = grid_mesh[i].ravel()
+    grid_ravel = grid_ravel.T
+    print(grid_ravel.shape)
+    return grid_ravel
 
 
 def uniform_grid(C_limit, N_each):
@@ -71,8 +74,8 @@ def main():
         C_array2 = sampling_uniform_grid(N_per_dim2, C_limits2)
         C_array_add = []
         for c in C_array2:
-            bool_inside = True in np.logical_and(np.array(C_limits)[:, 0] < c, c < np.array(C_limits)[:, 1])
-            if not bool_inside:
+            bool_outside = False in np.logical_and(np.array(C_limits)[:, 0] < c, c < np.array(C_limits)[:, 1])
+            if bool_outside:
                 C_array_add.append(c)
         N_total += len(C_array_add)
         N = calc_N(N_total, N_jobs)
