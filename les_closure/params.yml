@@ -19,8 +19,8 @@ data_params:
 ########################################################################################################################
 # Model parameters
 model:
-  order': 2          # order of eddy-viscosity model
-  N_params_force: 3
+  N_params: 3
+  random: 100000  # number of random points
 ########################################################################################################################
 sumstat_params:
   bins: 100                 # for pdf comparison
@@ -35,17 +35,16 @@ sumstat_params:
   sumstat: 'production_pdf_log'
 ########################################################################################################################
 # abs algorithm
-abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
+abc_algorithm: 'abc_IMCMC'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 num_training_points: 64
-random: 100000  # number of random points
+
 ################################################################################################################
 # Define only one of the following
 ################################################################################################################
 algorithm:
   abc:
       sampling: 'uniform'  # 'uniform', 'random', 'sobol'
-      N: 5000    # per dimension
-      N_params_in_task: 0  # only 0, 1 or 2  #only 0 and 2 for calibration
+      N: 10    # per dimension
   ############################################################################################################
   abc_IMCMC:
       # Calibration

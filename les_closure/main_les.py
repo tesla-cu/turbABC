@@ -6,10 +6,13 @@ import numpy as np
 sys.path.append('/Users/olgadorr/Research/ABC_MCMC')
 print(sys.path)
 import sumstat
+import model
+import data
+import workfunc_les
+
 import pyabc.glob_var as g
-# import pyabc.data as data
-# import pyabc.model as model
-# import pyabc.parallel as parallel
+import pyabc.parallel as parallel
+import pyabc.abc_alg as abc_alg
 #
 
 
@@ -45,49 +48,50 @@ def main():
     ####################################################################################################################
     print(input['sumstat_params']['sumstat'])
     algorithm_input = input['algorithm'][input['abc_algorithm']]
-    g.Truth = sumstat.TruthData(valid_folder=g.path['valid_data'],
-                              data_params=input['data_params'], sumstat_params=input['sumstat_params'])
-    print(g.Truth)
-    if input['data']['load'] == 0:
-        init.create_LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-        g.TEST_sp = data.DataSparse(params.data['data_path'], 0, g.TEST, params.abc['num_training_points'])
-        g.LES = None
-        g.TEST = None
-        path = os.path.join(params.data['data_path'], 'T.npz')
-        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
-                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
-    elif params.data['load'] == 1:
-        init.load_LES_TEST_data(params.data, params.physical_case, params.compare_pdf)
-        g.TEST_sp = data.DataSparse(params.data['data_path'], 0, g.TEST, params.abc['num_training_points'])
-        g.LES = None
-        g.TEST = None
-        path = os.path.join(params.data['data_path'], 'T.npz')
-        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
-                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
-    elif params.data['load'] == 2:
-        g.TEST_sp = data.DataSparse(params.data['data_path'], 1)
-        path = os.path.join(params.data['data_path'], 'T.npz')
-        g.TEST_Model = model.NonlinearModel(path, 0, params.model, params.abc, params.algorithm, params.C_limits,
-                                            params.compare_pdf, params.abc['random'], g.TEST_sp)
-    elif params.data['load'] == 3:
-        path = os.path.join(params.data['data_path'], 'T.npz')
-        g.TEST_Model = model.NonlinearModel(path, 1, params.model, params.abc, params.algorithm, params.C_limits,
-                                            params.compare_pdf, params.abc['random'])
-        g.sum_stat_true = np.load(os.path.join(params.data['data_path'], 'sum_stat_true.npz'))
-    #
-    # if params.parallel['N_proc'] > 1:
-    #     g.par_process = parallel.Parallel(params.parallel['progressbar'], params.parallel['N_proc'])
+
+    les_data = data.DataFiltered(valid_folder=g.path['valid_data'], case_params=input['data_params'])
+    g.Truth = sumstat.TruthData(valid_folder=g.path['valid_data'], data_params=input['data_params'],
+                                sumstat_params=input['sumstat_params'])
+    g.SumStat = sumstat.SummaryStatistics(sumstat_params=input['sumstat_params'])
+    g.LesModel = model.NonlinearModel(data=les_data, model_params=input['model'],
+                                      n_data_points=input['data_params']['N_point'],
+                                      calc_strain_flag=g.SumStat.sumstat_type != 'sigma_pdf_log')
+
+    C_limits = np.array(input['C_limits'])[:input['model']['N_params']]
+    logging.info('C_limits: {}'.format(C_limits))
+    np.savetxt(os.path.join(g.path['output'], 'C_limits_init'), C_limits)
+
+    g.work_function = workfunc_les.abc_work_function
+    g.par_process = parallel.Parallel(1, input['parallel_threads'])
     ####################################################################################################################
     # ABC algorithm
     ####################################################################################################################
-    # abc = abc_class.ABC(params.abc, params.algorithm, params.model['N_params'], params.parallel['N_proc'],
-    #                     params.C_limits)
-    # abc.main_loop()
-    # comm.Barrier()
-    # np.savez(os.path.join(g.path['output'], 'accepted_{}.npz'.format(rank)), C=g.accepted, dist=g.dist)
-    #
-    # logging.info('Accepted parameters and distances saved in {}'.format(os.path.join(g.path['output'],
-    #                                                                                  'accepted_{}.npz'.format(rank))))
+    if input['abc_algorithm'] == 'abc':  # classical abc algorithm (accepts all samples for further postprocessing)
+        C_array = abc_alg.sampling(algorithm_input['sampling'], C_limits, algorithm_input['N'])
+        abc_alg.abc_classic(C_array)
+        ################################################################################################################
+    elif input['abc_algorithm'] == 'abc_IMCMC':  # MCMC with calibration step (Wegmann 2009)
+        logging.info("ABC-MCMC algorithm")
+        logging.info('Calibration')
+        abc_alg.two_calibrations(algorithm_input, C_limits)
+        logging.info('Chains')
+        g.N_per_chain = algorithm_input['N_per_chain']
+        g.t0 = algorithm_input['t0']
+        abc_alg.mcmc_chains(n_chains=g.par_process.proc)
+        ################################################################################################################
+    elif input['abc_algorithm'] == 'abc_MCMC_adaptive':
+        logging.info("ABC-MCMC algorithm with adaptation")
+        logging.info('Chains')
+        g.C_limits = C_limits
+        g.N_per_chain = algorithm_input['N_per_chain']
+        g.target_acceptance = algorithm_input['target_acceptance']
+        g.t0 = algorithm_input['t0']
+        C_start = abc_alg.sampling('random', C_limits, input['parallel_threads'])
+        np.savetxt(os.path.join(g.path['calibration'], 'C_start'), C_start)
+        abc_alg.mcmc_chains(n_chains=g.par_process.proc)
+    else:
+        logging.warning('{} algorithm does not exist'.format(input['abc_algorithm']))
+    ####################################################################################################################
 
 
 if __name__ == '__main__':

@@ -5,16 +5,18 @@ from time import time
 from scipy.interpolate import RegularGridInterpolator
 
 import pyabc.utils as utils
+import pyabc.kde as kde
 import pyabc.glob_var as g
-# import workfunc_rans
 
 
 def sampling(sampling, C_limits, N):
+
     if sampling == 'random':
+        logging.info(f'Sampling is uniformly random with {N} samples in {len(C_limits)}D parameter space')
         array = utils.sampling_random(N, C_limits)
     elif sampling == 'uniform':
+        logging.info(f'Sampling is uniform grid with {N**len(C_limits)} samples in {len(C_limits)}D parameter space')
         array = utils.sampling_uniform_grid(N, C_limits)
-    logging.info('Sampling is {}'.format(sampling))
     return array
 
 
@@ -22,9 +24,9 @@ def abc_classic(C_array):
 
     N_params = len(C_array[0])
     N = len(C_array)
-    work_function = workfunc_rans.define_work_function()
+    logging.info(f'Classic ABC algorithm: Number of parameters: {N_params}, Number of samples: {N}')
     start = time()
-    g.par_process.run(func=work_function, tasks=C_array)
+    g.par_process.run(func=g.work_function, tasks=C_array)
     result = g.par_process.get_results()
     end = time()
     utils.timer(start, end, 'Time ')
@@ -48,21 +50,20 @@ def two_calibrations(algorithm_input, C_limits):
 
     S_init = calibration_loop(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][0])
     C_limits = calibration_postprocess1(S_init, algorithm_input['x'][0], algorithm_input['phi'], C_limits)
-    S_init = calibration_loop(sampling, C_limits, algorithm_input['N_calibration'][1])
+    S_init = calibration_loop(algorithm_input['sampling'], C_limits, algorithm_input['N_calibration'][1])
     calibration_postprocess2(S_init, algorithm_input['x'][1], algorithm_input['phi'], C_limits)
+    print(algorithm_input['prior_update'])
     if algorithm_input['prior_update']:
         update_prior(S_init, C_limits, algorithm_input['prior_update'])
 
 
-def calibration_loop(sampling, C_limits, N_calibration):
+def calibration_loop(sampling_type, C_limits, N_calibration):
 
-    work_function = workfunc_rans.define_work_function()
     logging.info('Sampling {}'.format(sampling))
-    C_array = sampling(sampling, C_limits, N_calibration)
-    logging.info('Calibration step 1 with {} samples'.format(len(C_array)))
-
+    C_array = sampling(sampling_type, C_limits, N_calibration)
+    logging.info(f'Calibration step 1')
     start_calibration = time()
-    g.par_process.run(func=work_function, tasks=C_array)
+    g.par_process.run(func=g.work_function, tasks=C_array)
     S_init = g.par_process.get_results()
     end_calibration = time()
     utils.timer(start_calibration, end_calibration, 'Time of calibration step 1')
@@ -96,7 +97,7 @@ def calibration_postprocess1(S_init, x, phi, C_limits):
 def calibration_postprocess2(S_init, x, phi, C_limits):
     N_params = len(C_limits)
     # Define epsilon again
-    g.eps = utils.define_eps(S_init, x[1])
+    g.eps = utils.define_eps(S_init, x)
     S_init = np.array(S_init)
     logging.info('eps after calibration2 step = {}'.format(g.eps))
     np.savetxt(os.path.join(g.path['calibration'], 'eps2'), [g.eps])
@@ -126,13 +127,12 @@ def calibration_postprocess2(S_init, x, phi, C_limits):
 def update_prior(S_init, C_limits, num_bin_update):
     # update prior based on accepted parameters in calibration
     N_params = len(C_limits)
-    prior, C_calibration = utils.gaussian_kde_scipy(data=S_init[:, :N_params],
-                                                    a=C_limits[:, 0],
-                                                    b=C_limits[:, 1],
-                                                    num_bin_joint=num_bin_update)
-    logging.info('Estimated parameter after calibration step is {}'.format(C_calibration))
+    prior = kde.kdepy_fftkde(data=np.array(S_init)[:, :N_params], a=C_limits[:, 0], b=C_limits[:, 1],
+                             num_bin_joint=num_bin_update)
+    map_calibration = kde.find_MAP_kde(prior, C_limits[:, 0], C_limits[:, 1])
+    logging.info('Estimated parameter after calibration step is {}'.format(map_calibration))
     np.savez(os.path.join(g.path['calibration'], 'prior.npz'), Z=prior)
-    np.savetxt(os.path.join(g.path['calibration'], 'C_final_smooth'), C_calibration)
+    np.savetxt(os.path.join(g.path['calibration'], 'C_final_smooth'), map_calibration)
     prior_grid = np.empty((N_params, num_bin_update+1))
     for i, limits in enumerate(g.C_limits):
         prior_grid[i] = np.linspace(limits[0], limits[1], num_bin_update+1)
@@ -175,14 +175,13 @@ def one_chain(chain_id):
     N_params = len(g.C_limits)
     C_init = np.loadtxt(os.path.join(g.path['output'], 'C_start')).reshape((-1, N_params))[chain_id]
     N_params = len(C_init)
-    work_function = workfunc_rans.define_work_function()
     result_c = np.empty((N, N_params))
     result_sumstat = np.empty((N, len(g.Truth.sumstat_true)))
-    result_dist = np.empty((N))
+    result_dist = np.empty(N)
     s_d = 2.4 ** 2 / N_params  # correct covariance according to dimensionality
 
     # add first param
-    result_c[0], result_sumstat[0], result_dist[0] = result_split(work_function(C_init), N_params)
+    result_c[0], result_sumstat[0], result_dist[0] = result_split(g.work_function(C_init), N_params)
     if g.target_acceptance is not None:
         delta = result_dist[0]
         g.std = np.sqrt(0.1 * (C_limits[:, 1] - C_limits[:, 0]))
@@ -215,7 +214,7 @@ def one_chain(chain_id):
                 c = chain_kernel(result_c[i - 1], s_d*cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
-            result = work_function(c)
+            result = g.work_function(c)
             counter_dist += 1
             if result[-1] <= g.eps:
                 prior_values = g.prior_interpolator([result_c[i - 1], c])
@@ -235,7 +234,7 @@ def one_chain(chain_id):
                 c = chain_kernel(result_c[i - 1], s_d * cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
-            result = work_function(c)
+            result = g.work_function(c)
             counter_dist += 1
             if result[-1] <= delta:  # distance < eps
                 result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
