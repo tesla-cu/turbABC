@@ -1,16 +1,17 @@
 import logging
 import numpy as np
 import os
-from pyabc.kde import gaussian_kde_scipy
+import itertools
+from pyabc.kde import gaussian_kde_scipy, bw_from_kdescipy
 from pyabc.utils import pdf_from_array_with_x, define_eps
 
 
-def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits):
+def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits, weights=None):
 
     N_params = len(C_limits)
     # C_final_joint
     C_final_joint = []
-    H, edges = np.histogramdd(accepted, bins=num_bin_joint, range=C_limits)
+    H, edges = np.histogramdd(accepted, bins=num_bin_joint, range=C_limits, weights=weights)
     logging.debug('Max number in bin: {}'.format(np.max(H)))
     logging.debug('Mean number in bin: {}'.format(np.mean(H)))
     edges = np.array(edges)
@@ -86,7 +87,7 @@ def calc_marginal_pdf_raw(accepted, num_bin_joint, C_limits, path):
 def marginal_confidence(N_params, path, level):
 
     confidence = np.zeros((N_params, 2))
-    for i in range(4):
+    for i in range(N_params):
         data_marg = np.loadtxt(os.path.join(path, 'marginal_smooth{}'.format(i)))
         x, y = data_marg[0], data_marg[1]
         dx = x[1] - x[0]
@@ -109,6 +110,47 @@ def marginal_confidence_joint(accepted, path, level):
         confidence[i, 0] = np.percentile(accepted_tmp, int(100*level))
         confidence[i, 1] = np.percentile(accepted_tmp, int(100*(1-level)))
     np.savetxt(os.path.join(path, 'quantile_{}'.format(int((1-level)*100))), confidence)
+
+
+def mirror_data_for_kde(points, left, right, weights=None):
+
+    # checking the equation of ellipse with the given point
+    inside_ellipse = lambda point, corner: 0 < np.sum(np.power(point - corner, 2) / np.power(size, 2)) < 1
+
+    def get_corners(left, right):
+        n_params = len(left)
+        limits = list(zip(left, right))
+        indices = list(itertools.product(range(2), repeat=n_params))
+        corners = [[limits[i][ind] for (i, ind) in enumerate(corner)] for corner in indices]
+        return corners
+
+    k = 1  # coefficient for reflection interval
+    size = k * bw_from_kdescipy(points)
+    print('percent of interval to reflect', size / (np.array(right) - np.array(left)))
+
+    new_points = list(points)
+    if weights:
+        new_weights = list(weights)
+    else:
+        weights = [1]*len(new_points)
+        new_weights = weights
+    corners = get_corners(left, right)
+    for point, w in zip(points, weights):
+        # axis reflection:
+        for i, p in enumerate(point):
+            for lim in [left[i], right[i]]:
+                if 0 < np.abs(p - lim) < size[i]:
+                    point_new = point
+                    point_new[i] = 2*lim - p
+                    new_points.append(point_new)
+                    new_weights.append(w)
+        # point reflection
+        for corner in corners:
+            if inside_ellipse(point, corner):
+                point_new = 2 * corner - point
+                new_points.append(point_new)
+                new_weights.append(w)
+    return np.array(new_points), np.array(new_weights)
 
 
 # def bootstrapping(Z, C_final, C_limits, n_sample):

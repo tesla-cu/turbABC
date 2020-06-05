@@ -22,7 +22,11 @@ class TruthData(object):
             self.norm = np.hstack((self.norm, np.max(np.abs(self.uv_flat[:, 0]))*np.ones(len(self.uv_flat[:, 0]))))
             self.sumstat_true = np.hstack((self.sumstat_true, -self.uv_flat[:, 0]))
             self.length.append(len(self.sumstat_true))
-        print('lenth', np.diff(self.length))
+        if 'x_separation' in case:
+            self.sumstat_true = np.hstack((self.sumstat_true, [0.7, 1.1]))
+            self.norm = np.hstack((self.norm, [1, 1]))
+            self.length.append(len(self.sumstat_true))
+        # print('lenth', np.diff(self.length))
         self.sumstat_true /= self.norm
 
 

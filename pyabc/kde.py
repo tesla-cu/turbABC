@@ -100,7 +100,7 @@ def kdepy_fftkde(data, a, b, num_bin_joint):
     time1 = time()
     a = np.array(a)-1e-10
     b = np.array(b)+1e-10
-    data = 2 * (data - a) / (b - a) - 1
+    data = 2 * (data - a) / (b - a) - 1     # transform data to be [-1, 1], since gaussian is the same in all directions
     bandwidth = bw_from_kdescipy(data, 'scott')
     _, grid_ravel = grid_for_kde(-1*np.ones(N_params), np.ones(N_params), num_bin_joint)
     kde = FFTKDE(kernel='gaussian', bw=np.mean(bandwidth))

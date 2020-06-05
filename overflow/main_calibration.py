@@ -21,19 +21,22 @@ def calibration_loop(overflow, job_folder, c_array):
         cp_file = open(os.path.join(job_folder, 'cp_all.bin'), 'ab')
         u_file = open(os.path.join(job_folder, 'u_slice.bin'), 'ab')
         uv_file = open(os.path.join(job_folder, 'uv_slice.bin'), 'ab')
+        u_surface_file = open(os.path.join(job_folder, 'u_surface.bin'), 'ab')
 
         logging.info('{} {}'.format(i, c))
-        result, cp, u, uv = work_function(overflow, c, i)
+        result, cp, u, uv, u_surface = work_function(overflow, c, i)
         # logging.info('{} {}'.format(i, result))
         result_file.write('{}\n'.format(result))
         cp_file.write(bytearray(cp))
         u_file.write(bytearray(u))
         uv_file.write(bytearray(uv))
+        u_surface_file.write(bytearray(u_surface))
 
         result_file.close()
         cp_file.close()
         u_file.close()
         uv_file.close()
+        u_surface_file.close()
 
 
     end = time()
@@ -75,7 +78,7 @@ def main():
     overflow = Overflow(job_folder, data_folder, exe_dir, N_proc)
     g.job_folder = job_folder
     g.Grid = sumstat.GridData(data_folder)
-    g.Truth = sumstat.TruthData(data_folder, ['cp', 'u', 'uv'])
+    g.Truth = sumstat.TruthData(data_folder, ['cp', 'u', 'uv', 'x_separation'])
     calibration_loop(overflow, job_folder, c_array)
 
 

@@ -44,6 +44,17 @@ class DataFiltered(object):
         return kernel
 
     @staticmethod
+    def sinc_kernel_3d(k, limit):
+        """ Create 3D array of sinc(s) filter (sharp filter in physical space)
+        :param k: array of wave numbers;
+        :param limit:
+        :return: kernel array
+        """
+        a = np.array([[[np.sqrt(kx ** 2 + ky ** 2 + kz ** 2) for kz in k[2]] for ky in k[1]] for kx in k[0]])
+        kernel = np.sinc(a / limit)
+        return kernel
+
+    @staticmethod
     def filter3d_array(data, kernel):
         """ Filtering of ndarray (performed as multiplication in Fourier space)
         :param data: nD np.array of data

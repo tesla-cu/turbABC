@@ -3,11 +3,9 @@ import numpy as np
 import os
 import sys
 import glob
-import yaml
 import postprocess.postprocess_func as pp
 from pyabc.utils import define_eps
-from pyabc.kde import gaussian_kde_scipy, kdepy_fftkde
-import rans_ode.sumstat as sumstat
+from pyabc.kde import gaussian_kde_scipy, kdepy_fftkde, find_MAP_kde
 from postprocess.regression import regression
 
 
@@ -51,17 +49,20 @@ def new_limits(new_samples, N_params):
 def main(args):
 
     # Initialization
-    if len(args) > 1:
-        input_path = args[1]
-    else:
-        input_path = os.path.join('../runs_abc/', 'params.yml')
+    # if len(args) > 1:
+    #     input_path = args[1]
+    # else:
+    #     # input_path = os.path.join('../runs_abc/', 'params.yml')
+    #     input_path = os.path.join('../runs_abc/', 'params.yml')
 
-    input = yaml.load(open(input_path, 'r'))
+    # input = yaml.load(open(input_path, 'r'))
 
     ### Paths
     # path = input['path']
-    path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
+    # path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
     # path = {'output': os.path.join('../', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
+    path = {'output': os.path.join('../les_closure/ABC/', 'output/'), 'valid_data': '../les_closure/valid_data/'}
+
     print(path)
     logging.basicConfig(
         format="%(levelname)s: %(name)s:  %(message)s",
@@ -109,8 +110,9 @@ def main(args):
         del H
         # ##############################################################################
         logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        # Z, C_final_smooth = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
-        Z, C_final_smooth = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+        Z = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+        # Z = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+        C_final_smooth = find_MAP_kde(Z, C_limits[:, 0], C_limits[:, 1])
         np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
         logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
         np.savez(os.path.join(folder, 'Z.npz'), Z=Z)

@@ -1,53 +1,19 @@
 import logging
 import numpy as np
 import os
-import pyabc.postprocess_func as pp
-from pyabc.kde import find_MAP_kde, kdepy_fftkde
-from pyabc.distance import calc_err_norm2
+import shutil
+import postprocess.postprocess_func as pp
+from pyabc.kde import find_MAP_kde, kdepy_fftkde, gaussian_kde_scipy
 from overflow.sumstat import TruthData
 from plotting.plotting import plot_dist_pdf
-
-N_jobs = 35
-
-
-def collect_MAP_values(output_folder, x_list, n_bin_smooth):
-    MAP = []
-    for x in x_list:
-        folder = os.path.join(output_folder, 'x_{}'.format(x * 100))
-        MAP.append(np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(n_bin_smooth))))
-
-    MAP = np.hstack((np.array(MAP), np.ones(len(MAP)).reshape(-1, 1)*0.31))
-    np.savetxt(os.path.join(output_folder, 'MAP_values'), MAP)
-    return
+from pyabc.distance import calc_err_norm2
+from postprocess.postprocess_classic_abc import output_by_percent
+N_jobs = 45
 
 
-def main():
-
-    basefolder = '../'
-    ### Paths
-    path = {'output': os.path.join(basefolder, 'output/'), 'valid_data': '../overflow/valid_data/'}
-    print('Path:', path)
-    logging.basicConfig(
-        format="%(levelname)s: %(name)s:  %(message)s",
-        handlers=[logging.FileHandler("{0}/{1}.log".format(path['output'], 'ABClog_postprocess0005')), logging.StreamHandler()],
-        level=logging.DEBUG)
-
-    logging.info('\n############# POSTPROCESSING ############')
-    x_list = [0.3, 0.1, 0.05, 0.03, 0.01, 0.005]
-    C_limits = np.array([[0.07, 0.11],  # beta_st
-                 [0.3, 0.82],  # sigma_w1
-                 [0.055, 0.1005],  # beta1
-                 [0.05, 0.135]])  # beta2
-    np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
-    N_params = len(C_limits)
-    folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(N_jobs)]
-
-    Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv'])
-    sumstat_true = Truth.sumstat_true
-
-    logging.info('Loading data')
-    result = np.empty((0, len(sumstat_true)+5+1))  # 5 parameters in the beginning  and distance in the end
+def load_data(folders, len_sumstat):
     N_total = 0
+    result = np.empty((0, len_sumstat+5+1))   # + 5 parameters in the beginning and distance in the end
     for i, folder in enumerate(folders):
         print('job {}'.format(i))
         N_total += len(np.loadtxt(os.path.join(folder, 'c_array_{}'.format(i))))
@@ -58,65 +24,209 @@ def main():
                 result = np.vstack((result, d))
         if N_total != len(result):
             print('Job {} did not finish ({} out of {}), diff = {}'.format(i, len(result), N_total,
-                                                                           N_total-len(result)))
+                                                                           N_total - len(result)))
     print(N_total, len(result))
-    # all statistics
-    # dist = result[:, -1]
+    # N_total = len(result)
+    print(N_total, 6**5)
+    return result, N_total
+
+
+def dist_by_sumstat(sumstat, sumstat_true):
+    dist = np.empty(len(sumstat))
+    for i, line in enumerate(sumstat):
+        dist[i] = calc_err_norm2(line, sumstat_true)
+    return dist
+
+
+
+def main():
+
+    basefolder = '../'
+    ### Paths
+    path = {'output': os.path.join(basefolder, 'overflow_results/output/'),
+            'valid_data': '../overflow/valid_data/'}
+    print('Path:', path)
+    logging.basicConfig(
+        format="%(levelname)s: %(name)s:  %(message)s",
+        handlers=[logging.FileHandler(os.path.join(path['output'], 'ABC_postprocess.log')), logging.StreamHandler()],
+        level=logging.DEBUG)
+
+    logging.info('\n############# POSTPROCESSING ############')
+    x_list = [0.3, 0.1, 0.05, 0.03, 0.01, 0.005]
+    num_bin_kde = 20
+    num_bin_raw = 10
+    Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv', 'x_separation'])
+    sumstat_true = Truth.sumstat_true
+    b_bstar = True
+    C_limits = [[0.07, 0.18],  # beta_st
+                [0.2, 1.6],  # sigma_w1
+                [0.14, 1.27],  # beta1/beta*
+                [0.27, 23],  # beta2/beta*
+                [0.27, 0.36]]  # a1
+    C_limits = np.array(C_limits)
+    np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
+    N_params = len(C_limits)
+    logging.info('Loading data')
+    folders = [os.path.join(path['output'], 'calibration_job{}'.format(i), ) for i in range(N_jobs)]
+    result, N_total = load_data(folders, len(sumstat_true))
+    if b_bstar:
+        result[:, 2] /= result[:, 0]    # beta1/beta*
+        result[:, 3] /= result[:, 0]    # beta2/beta*
+    ### tmp
+    # unique_a = np.unique(result[:, 4])
+    # print(unique_a)
+    # print(np.diff(unique_a))
+    # print(unique_a[0] - 1.5*np.diff(unique_a)[0], unique_a[0] - 2.5*np.diff(unique_a)[0])
+    # exit()
+    ###
+
+    # ### taking slice
+    # ind = np.where(result[:, 1] == 0.55)[0]
+    # result = result[ind]
+    # result = np.delete(result, 1, axis=1)
+    # C_limits = np.delete(C_limits, 1, axis=0)
+    # N_total = len(result)
+    # N_params = len(C_limits)
+    # # for i in range(len(Truth.length)):
+    # #     Truth.length[i] -= 1
+    # print('statistics length:', Truth.length)
+
+    ####################################################################
+    c_array = result[:, :N_params]
+    sumstat_all = result[:, N_params:-1]
+    # TODO: check if need to divide by norm
+    print('/n########')
     # cp statistics
-    dist = np.empty(N_total)
-    for i, line in enumerate(result[:, 5:-1]):
-        dist[i] = calc_err_norm2(line/Truth.norm, Truth.sumstat_true)
-        # dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
-        # dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 0])
-        # dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], -Truth.uv_flat[:, 0])
-        # if i<10:
-        #     plot_results(-Truth.uv_flat[:, 0], line[Truth.length[1]:Truth.length[2]], path['output'], str(i))
-    ind = np.argsort(dist)
-    plot_dist_pdf(path['output'], dist, 0.1)
-    ####################################################################################################################
+    print('cp statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[:Truth.length[0]], Truth.cp[:, 1])
+    dist = dist_by_sumstat(sumstat_all[:, :Truth.length[0]], Truth.cp[:, 1])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_cp'), i_stat=0)
+    # u statistics
+    print('U statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 0])
+    dist = dist_by_sumstat(sumstat_all[:, Truth.length[0]:Truth.length[1]], Truth.u_flat[:, 0])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_u'), i_stat=1)
+    # uv statistics
+    print('uv statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[Truth.length[1]:Truth.length[2]], -Truth.uv_flat[:, 0])
+    dist = dist_by_sumstat(sumstat_all[:, Truth.length[1]:Truth.length[2]], -Truth.uv_flat[:, 0])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_uv'), i_stat=2)
+
+    # cp + u statistics
+    print('cp + U statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[:Truth.length[1]]/Truth.norm[:Truth.length[1]],
+    #                              Truth.sumstat_true[:Truth.length[1]])
+    dist = dist_by_sumstat(sumstat_all[:, :Truth.length[1]] / Truth.norm[:Truth.length[1]],
+                           Truth.sumstat_true[:Truth.length[1]])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_cp_u'), i_stat=3)
+
+
+    # x1 statistics
+    print('x1 statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[Truth.length[2]], Truth.sumstat_true[Truth.length[2]])
+    dist = dist_by_sumstat(sumstat_all[:, Truth.length[2]], Truth.sumstat_true[Truth.length[2]])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_x1'), i_stat=15)
+    # x2 statistics
+    print('x2 statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[Truth.length[2]+1], Truth.sumstat_true[Truth.length[2]+1])
+    dist = dist_by_sumstat(sumstat_all[:, Truth.length[2]+1], Truth.sumstat_true[Truth.length[2]+1])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_x2'), i_stat=16)
+    # x1 + x2 statistics
+    print('x1+x2 statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     dist[i] = calc_err_norm2(line[Truth.length[2]:], Truth.sumstat_true[Truth.length[2]:])
+    dist = dist_by_sumstat(sumstat_all[:, Truth.length[2]:], Truth.sumstat_true[Truth.length[2]:])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_x1_x2'), i_stat=17)
+    dist_x = dist.copy()
+
+    # cp + u + uv statistics
+    print('cp + U + uv statistics')
+    # dist = np.empty(N_total)
+    # for i, line in enumerate(result[:, N_params:-1]):
+    #     print(len(line), Truth.length)
+    #     dist[i] = calc_err_norm2(line[:Truth.length[2]] / Truth.norm[:Truth.length[2]],
+    #                              Truth.sumstat_true[:Truth.length[2]])
+    dist = dist_by_sumstat(sumstat_all[:, :Truth.length[2]] / Truth.norm[:Truth.length[2]],
+                           Truth.sumstat_true[:Truth.length[2]])
+    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                      os.path.join(path['output'], 'postprocess_cp_u_uv'), i_stat=4)
+    dist_all = dist.copy()
+
+    # all statistics if dist(x1+x2)<0.5, else 0
+    limits = [0.5, 0.25, 0.1, 0.05]
+    for i, lim in enumerate(limits):
+        print(f'all if less {lim} statistics')
+        ind_nonzero = np.where(dist_x < lim)[0]
+        result2 = result[ind_nonzero]
+        dist = dist_all[ind_nonzero]
+        print('nonzero: ', len(ind_nonzero))
+        output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+                          os.path.join(path['output'], f'postprocess_all_if_less_{lim}'), i_stat=5 + i)
+
+
+
+    # # dist = np.zeros(N_total)
+    # # ind_nonzero = []
+    # # for i, line in enumerate(result[:, 5:-1]):
+    # #     if calc_err_norm2(line[Truth.length[2]:], Truth.sumstat_true[Truth.length[2]:]) < 0.5:
+    # #         dist[i] = calc_err_norm2(line[:Truth.length[2]] / Truth.norm[:Truth.length[2]],
+    # #                                  Truth.sumstat_true[:Truth.length[2]])
+    # #         ind_nonzero.append(i)
+    # ind_nonzero = np.where(dist_x < 0.5)[0]
+    # # ind_nonzero = np.array(ind_nonzero)
+    # result2 = result[ind_nonzero]
+    # dist = dist_all[ind_nonzero]
     #
-    # ##################################################################################################################
-    logging.info('\n############# Classic ABC ############')
-    accepted = result[ind, :5]
-    dist = dist[ind]
-    for x in x_list:
-        n = int(x * N_total)
-        folder = os.path.join(path['output'], 'x_{}'.format(x * 100))
-        if not os.path.isdir(folder):
-            os.makedirs(folder)
-        logging.info('\n')
-        print(folder)
-        print('min dist = {} at {}'.format(np.min(dist), accepted[0]))
-        accepted = accepted[:n, :N_params]
-        dist = dist[:n]
-        eps = np.max(dist)
-        np.savetxt(os.path.join(folder, 'eps'), [eps])
-        logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, n, N_total))
-        num_bin_kde = 20
-        num_bin_raw = 20
-        ##############################################################################
-        logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
-        H, C_final_joint = pp.calc_raw_joint_pdf(accepted, num_bin_raw, C_limits)
-        np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
-        pp.calc_marginal_pdf_raw(accepted, num_bin_raw, C_limits, folder)
-        del H
-        # ##############################################################################
-        logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-        Z = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
-        C_final_smooth = find_MAP_kde(Z, C_limits[:, 0], C_limits[:, 1])
-        np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
-        logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
-        # ##############################################################################
-        np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
-        Z = np.load(os.path.join(folder, 'Z.npz'))['Z']
-        pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
-        pp.calc_conditional_pdf_smooth(Z, folder)
-        del Z
-        for q in [0.05, 0.1, 0.25]:
-            pp.marginal_confidence(N_params, folder, q)
-            pp.marginal_confidence_joint(accepted, folder, q)
-    del accepted, dist
-    collect_MAP_values(path['output'], x_list, num_bin_kde)
+    # print('nonzero: ', len(ind_nonzero))
+    # output_by_percent(result2[:, N_params], dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+    #                   os.path.join(path['output'], 'postprocess_all_if_less_05'))
+
+
+
+
+
+
+    # # if dist(x1+x2)<0.5, else 0
+    # ind_nonzero = []
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     if calc_err_norm2(line[Truth.length[2]:], Truth.sumstat_true[Truth.length[2]:]) < 0.5:
+    #         ind_nonzero.append(i)
+    # ind_nonzero = np.array(ind_nonzero)
+    # accepted = result[ind_nonzero, :N_params]
+    # print('nonzero: ', len(ind_nonzero))
+    # marginal(accepted, C_limits, 20, 10, os.path.join(path['output'], 'postprocess_if_less_05', 'x_100.0', ))
+
+    # # (0.5 < x1 < 1) and (1 < x2 < 2), else 0
+    # ind_nonzero = []
+    # for i, line in enumerate(result[:, 5:-1]):
+    #     x1 = line[Truth.length[2]]
+    #     x2 = Truth.sumstat_true[Truth.length[2]+1]
+    #     if (0.5 < x1 < 1) and (1 < x2 < 2):
+    #         ind_nonzero.append(i)
+    # ind_nonzero = np.array(ind_nonzero)
+    # accepted = result[ind_nonzero, :N_params]
+    # print('nonzero: ', len(ind_nonzero))
+    # marginal(accepted, C_limits, 20, 10, os.path.join(path['output'], 'postprocess_if_good', 'x_100.0', ))
 
 
 if __name__ == '__main__':

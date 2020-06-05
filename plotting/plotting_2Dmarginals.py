@@ -37,17 +37,18 @@ double_column = 470
 
 
 def fig_size(width_column):
-   fig_width_pt = width_column
-   inches_per_pt = 1.0 / 72.27  # Convert pt to inches
-   golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
-   fig_width = fig_width_pt * inches_per_pt  # width in inches
-   fig_height = fig_width * golden_mean  # height in inches
-   return fig_width, fig_height
+    fig_width_pt = width_column
+    inches_per_pt = 1.0 / 72.27  # Convert pt to inches
+    golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
+    fig_width = fig_width_pt * inches_per_pt  # width in inches
+    fig_height = fig_width * golden_mean  # height in inches
+    return fig_width, fig_height
+
 
 folder = './plots/'
 
 
-def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names, plot_folder):
+def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint, params_names, plot_folder):
 
     N_params = len(C_limits)
     max_value, max_value2 = 0.0, 0.0
@@ -96,7 +97,7 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
     cmap2 = colors.LinearSegmentedColormap.from_list('Custom cmap', cmaplist2)
 
     width, height = fig_size(double_column)
-    confidence = np.loadtxt(os.path.join(data_folder, 'confidence_75'))
+    # confidence = np.loadtxt(os.path.join(data_folder, 'confidence_75'))
     print(width, height)
     fig = plt.figure(figsize=(width, height))
     for i in range(N_params):
@@ -106,8 +107,8 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1])
                 c_final_smooth = np.loadtxt(os.path.join(data_folder, 'C_final_smooth{}'.format(num_bin_joint)))
-                ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$75\%$ interval')
-                ax.axvline(confidence[i, 1], linestyle='--', color='b')
+                # ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$75\%$ interval')
+                # ax.axvline(confidence[i, 1], linestyle='--', color='b')
                 if len(c_final_smooth.shape) == 1:
                     ax.axvline(c_final_smooth[i], linestyle='--', color='r', label='max of joint pdf')
                 elif len(c_final_smooth) < 4:
@@ -128,7 +129,7 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
 
                 ax.yaxis.set_major_formatter(plt.NullFormatter())
                 ax.yaxis.set_major_locator(plt.NullLocator())
-                if i != 3:
+                if i != N_params - 1:
                     ax.xaxis.set_major_formatter(plt.NullFormatter())
                 else:
                     ax.set_xlabel(params_names[i], labelpad=2)
@@ -151,7 +152,7 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
                 # ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
                 # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.02))
                 # ax.yaxis.set_major_locator(ticker.MultipleLocator(0.02))
-                if j == 3:
+                if j == N_params - 1:
                     ax.yaxis.tick_right()
                     ax.yaxis.set_label_position("right")
                     ax.set_ylabel(params_names[i], labelpad=2)
@@ -163,15 +164,14 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, num_bin_joint, params_names,
 
                 ax.tick_params(axis='both', which='minor', direction='in')
                 ax.tick_params(axis='both', which='major', pad=0.8)
-
-                ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+                ext = (mirror_limits[j, 0], mirror_limits[j, 1], mirror_limits[i, 0], mirror_limits[i, 1])
 
                 im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                extent=ext, vmin=0, vmax=max_value)
             elif i > j:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
-                ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+                ext = (mirror_limits[j, 0], mirror_limits[j, 1], mirror_limits[i, 0], mirror_limits[i, 1])
                 ax.tick_params(axis='both', which='major', pad=2)
                 # ax.xaxis.set_major_locator(ticker.MultipleLocator(ticks[j]))
                 # ax.yaxis.set_major_locator(ticker.MultipleLocator(ticks[i]))

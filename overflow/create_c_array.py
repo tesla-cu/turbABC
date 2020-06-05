@@ -4,27 +4,34 @@ import os
 import sys
 import itertools
 
-basefolder = '../output/'
-N_params = 4
-N_per_dim = 10
-N_jobs = 35
+basefolder = '../overflow_results/output/'
+N_params = 5
+N_per_dim = 6
+N_jobs = 45
 
 C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
 
-C_limits = [[0.07, 0.11],   # beta_st
-            [0.3, 0.9],         # sigma_w1
-            [0.055, 0.12],       # beta1
-            [0.05, 0.18]]       # beta2
-            # [0.31, 0.40],       # a1
+# C_limits = [[0.07, 0.18],   # beta_st
+#             [0.2, 1.6],         # sigma_w1
+#             [0.01, 0.23],       # beta1
+#             [0.05, 1.6],       # beta2
+#             [0.27, 0.36]]       # a1
+b_bstar = True
+C_limits = [[0.07, 0.18],   # beta_st
+            [0.2, 1.6],         # sigma_w1
+            [0.14, 1.27],       # beta1/beta*
+            [0.27, 23],       # beta2/beta*
+            [0.27, 0.36]]       # a1
 
 # if need to add points in the end of file
-add = 0
-N_per_dim2 = [10, 13, 13, 14]
-C_limits2 = [[0.07, 0.11],   # beta_st
-             [0.3, 0.82],         # sigma_w1
-             [0.055, 0.1005],       # beta1
-             [0.05, 0.165]]       # beta2
+add = 1
+N_per_dim2 = [6, 6, 6, 6, 8]
+C_limits2 = [[0.07, 0.18],   # beta_st
+             [0.2, 1.6],         # sigma_w1
+             [0.14, 1.27],       # beta1/beta*
+             [0.27, 23],       # beta2/beta*
+             [0.24, 0.36]]       # a1
 
 
 def sampling_uniform_grid(N_each, C_limits):
@@ -88,6 +95,12 @@ def main():
     ###################################################################################################################
     #
     ###################################################################################################################
+    if b_bstar:
+        C_array[:, 2] *= C_array[:, 0]  # beta1
+        C_array[:, 3] *= C_array[:, 0]  # beta2
+    ###################################################################################################################
+    #
+    ###################################################################################################################
     for i in range(N_jobs):
         start, end = np.sum(N[:i]), np.sum(N[:i+1])
         print('job {}: from {} to {}'.format(i, start, end))
@@ -95,6 +108,8 @@ def main():
         if not os.path.isdir(dir):
             os.makedirs(dir)
         np.savetxt(os.path.join(dir, 'c_array_{}'.format(i)), C_array[start:end])
+
+    np.savetxt(os.path.join(basefolder, 'C_limits_init'), C_limits)
 
 
 if __name__ == '__main__':

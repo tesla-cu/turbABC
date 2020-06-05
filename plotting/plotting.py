@@ -12,12 +12,12 @@ import matplotlib.colors as colors
 from rans_ode.sumstat import TruthData
 plt.style.use('dark_background')
 
-mpl.rcParams['font.size'] = 12
-mpl.rcParams['axes.titlesize'] = 1 * plt.rcParams['font.size']
+mpl.rcParams['font.size'] = 10
+mpl.rcParams['axes.titlesize'] = plt.rcParams['font.size']
 mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
 mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']
-mpl.rcParams['xtick.labelsize'] = 0.8*plt.rcParams['font.size']
-mpl.rcParams['ytick.labelsize'] = 0.8*plt.rcParams['font.size']
+mpl.rcParams['xtick.labelsize'] = plt.rcParams['font.size']
+mpl.rcParams['ytick.labelsize'] = plt.rcParams['font.size']
 mpl.rcParams['xtick.major.size'] = 3
 mpl.rcParams['xtick.minor.size'] = 3
 mpl.rcParams['xtick.major.width'] = 1
@@ -122,45 +122,67 @@ def plot_marginal_change_with_regression(data_folders, folder_reg, params_names,
 
 def plot_marginal_change(data_folders, params_names, C_limits, num_bin_kde, plot_folder, nominal_values=None):
 
-    N_params = len(params_names)
+    N_params = len(C_limits)
     colormap = plt.cm.gist_ncar
     plt.gca().set_prop_cycle(color=[colormap(i) for i in np.linspace(0, 1, len(data_folders))])
     labels = []
-    fig_width, fig_height = fig_size(oneandhalf_column)
-    fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
-    axarr[0].yaxis.set_major_formatter(plt.NullFormatter())
-    axarr[0].yaxis.set_major_locator(plt.NullLocator())
-    for folder in data_folders:
-        x = os.path.basename(os.path.normpath(folder))[2:]
-        MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
-        MAP_x = MAP_x.reshape((-1, N_params))
-        labels.append('x = {}\%'.format(x))
-        for i in range(N_params):
-            data_marg = np.loadtxt(os.path.join(folder, 'marginal_smooth{}'.format(i)))
-            for map in MAP_x:
-                MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
-                axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
-            axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
-            if nominal_values:
-                axarr[i].axvline(nominal_values[i], color='b', linestyle='--')
-            axarr[i].set_xlabel(params_names[i])
-            axarr[i].set_xlim(C_limits[i])
-    fig.subplots_adjust(left=0.02, right=0.98, wspace=0.06, hspace=0.1, bottom=0.18, top=0.82)
+    if N_params == 4:
+        fig_width, fig_height = fig_size(oneandhalf_column)
+        fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.8*fig_height))
+        axarr[0].yaxis.set_major_formatter(plt.NullFormatter())
+        axarr[0].yaxis.set_major_locator(plt.NullLocator())
+        for folder in data_folders:
+            x = os.path.basename(os.path.normpath(folder))[2:]
+            # MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
+            # MAP_x = MAP_x.reshape((-1, N_params))
+            labels.append('x = {}\%'.format(x))
+            for i in range(N_params):
+                data_marg = np.loadtxt(os.path.join(folder, 'marginal{}'.format(i)))
+                # for map in MAP_x:
+                #     MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
+                #     axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
+                axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
+                if nominal_values:
+                    axarr[i].axvline(nominal_values[i], color='b', linestyle='--')
+                axarr[i].set_xlabel(params_names[i])
+                axarr[i].set_xlim(C_limits[i])
+        fig.subplots_adjust(left=0.02, right=0.98, wspace=0.06, hspace=0.1, bottom=0.18, top=0.82)
 
-    plt.legend(labels, ncol=3, loc='upper center',
-               bbox_to_anchor=[-1.0, 1.35], labelspacing=0.0,
-               handletextpad=0.5, handlelength=1.5,
-               fancybox=False, shadow=False, frameon=False)
+        plt.legend(labels, ncol=3, loc='upper center',
+                   bbox_to_anchor=[-1.0, 1.35], labelspacing=0.0,
+                   handletextpad=0.5, handlelength=1.5,
+                   fancybox=False, shadow=False, frameon=False)
+        fig.savefig(os.path.join(plot_folder, 'marginal_change'))
+        plt.close('all')
+    elif N_params == 5:
+        fig_width, fig_height = fig_size(double_column)
+        fig, axarr = plt.subplots(nrows=1, ncols=N_params, sharey=True, figsize=(fig_width, 0.6 * fig_height))
+        axarr[0].yaxis.set_major_formatter(plt.NullFormatter())
+        axarr[0].yaxis.set_major_locator(plt.NullLocator())
+        for folder in data_folders:
+            x = os.path.basename(os.path.normpath(folder))[2:]
+            # MAP_x = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
+            # MAP_x = MAP_x.reshape((-1, N_params))
+            labels.append('x = {}\%'.format(x))
+            for i in range(N_params):
+                data_marg = np.loadtxt(os.path.join(folder, 'marginal_{}'.format(i)))
+                # for map in MAP_x:
+                #     MAP_y = np.interp(map[i], data_marg[0], data_marg[1])
+                #     axarr[i].scatter(map[i], MAP_y, color='r', s=10, zorder=2)
+                axarr[i].plot(data_marg[0], data_marg[1], zorder=1)
+                if nominal_values:
+                    axarr[i].axvline(nominal_values[i], color='b', linestyle='--')
+                axarr[i].set_xlabel(params_names[i])
+                axarr[i].set_xlim(C_limits[i])
+        fig.subplots_adjust(left=0.02, right=0.98, wspace=0.06, hspace=0.1, bottom=0.18, top=0.82)
 
-    # custom_lines = [Line2D([0], [0], color=colors[0], lw=1),
-    #                 Line2D([0], [0], color=colors[1], linestyle='-', lw=1),
-    #                 Line2D([0], [0], color=colors[2], linestyle='-', lw=1)]
-    # axarr[0, 1].legend(custom_lines, ['true data', '3 parameters', '4 parameters'], loc='upper center',
-    #                    bbox_to_anchor=(0.99, 1.35), frameon=False,
-    #                    fancybox=False, shadow=False, ncol=3)
+        plt.legend(labels, ncol=3, loc='upper center',
+                   bbox_to_anchor=[-1.0, 1.35], labelspacing=0.0,
+                   handletextpad=0.5, handlelength=1.5,
+                   fancybox=False, shadow=False, frameon=False)
 
-    fig.savefig(os.path.join(plot_folder, 'marginal_change'))
-    plt.close('all')
+        fig.savefig(os.path.join(plot_folder, 'marginal_change'))
+        plt.close('all')
 
 
 def plot_MAP_confidence_change(data_folders, params_names, num_bin_kde, C_limits, plot_folder):
@@ -242,9 +264,6 @@ def plot_eps_change(data_folders, plot_folder):
     plt.close('all')
 
 
-
-
-
 def plot_marginal_raw_pdf(data_folder, C_limits, num_bin_joint, params_names, plot_folder):
 
     N_params = len(C_limits)
@@ -262,7 +281,8 @@ def plot_marginal_raw_pdf(data_folder, C_limits, num_bin_joint, params_names, pl
     cmaplist[0] = 'white' # force the first color entry to be white
     cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
 
-    confidence = np.loadtxt(os.path.join(data_folder, 'confidence_95'))
+    # confidence = np.loadtxt(os.path.join(data_folder, 'confidence_95'))
+    fig_width, fig_height = fig_size(double_column)
     fig = plt.figure(figsize=(1.25*fig_width, 1.1*fig_width))
     for i in range(N_params):
         for j in range(N_params):
@@ -326,13 +346,14 @@ def plot_dist_pdf(path, dist, x):
     ax.hist(dist, bins=100, alpha=0.8)
     eps = np.percentile(dist, q=int(x * 100))
     print('eps =', eps)
-    ax.axvline(eps, label='eps')
-    ax.set_xlabel(r'$\rho$')
-    ax.set_ylabel(r'pdf($\rho$)')
+    ax.axvline(eps)
+    ax.set_xlabel('d')
+    ax.set_ylabel('pdf(d)')
     fig.subplots_adjust(left=0.2, right=0.98, bottom=0.2, top=0.95)
     fig.savefig(os.path.join(path, 'dist'))
     plt.close('all')
     return eps
+
 
 def plot_results(truth, results, path, name):
     fig_width, fig_height = fig_size(oneandhalf_column)
