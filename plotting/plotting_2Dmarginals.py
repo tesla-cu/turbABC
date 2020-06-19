@@ -11,8 +11,6 @@ import matplotlib.colors as colors
 from rans_ode.sumstat import TruthData
 plt.style.use('dark_background')
 
-
-
 mpl.rcParams['font.size'] = 11
 mpl.rcParams['axes.titlesize'] = 1 * plt.rcParams['font.size']
 mpl.rcParams['axes.labelsize'] = plt.rcParams['font.size']
@@ -45,10 +43,7 @@ def fig_size(width_column):
     return fig_width, fig_height
 
 
-folder = './plots/'
-
-
-def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint, params_names, plot_folder):
+def plot_marginal_pdf(data_folder, C_limits, mirror_limits, num_bin_joint, params_names, plot_folder, smooth=''):
 
     N_params = len(C_limits)
     max_value, max_value2 = 0.0, 0.0
@@ -56,9 +51,9 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint
     for i in range(N_params):
         for j in range(N_params):
             if i < j:
-                data[str(i) + str(j)] = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}{}'.format(i, j)))
+                data[str(i) + str(j)] = np.loadtxt(os.path.join(data_folder, f'marginal_{smooth}{i}{j}'))
                 max_value = max(max_value, np.max(data[str(i)+str(j)]))
-            if i > j:
+            if i > j and smooth:
                 data[str(i) + str(j)] = np.loadtxt(
                     os.path.join(data_folder, 'conditional_smooth{}{}'.format(i, j)))
                 norm = np.sum(data[str(i) + str(j)])
@@ -103,17 +98,18 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
-                data_marg = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}'.format(i)))
+                data_marg = np.loadtxt(os.path.join(data_folder, f'marginal_{smooth}{i}'))
                 ax = plt.subplot2grid((N_params, N_params), (i, i))
                 ax.plot(data_marg[0], data_marg[1])
-                c_final_smooth = np.loadtxt(os.path.join(data_folder, 'C_final_smooth{}'.format(num_bin_joint)))
-                # ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$75\%$ interval')
-                # ax.axvline(confidence[i, 1], linestyle='--', color='b')
-                if len(c_final_smooth.shape) == 1:
-                    ax.axvline(c_final_smooth[i], linestyle='--', color='r', label='max of joint pdf')
-                elif len(c_final_smooth) < 4:
-                    for C in c_final_smooth:
-                        ax.axvline(C[i], linestyle='--', color='r', label='joint max')
+                if smooth:
+                    c_final_smooth = np.loadtxt(os.path.join(data_folder, f'C_final_{smooth}{num_bin_joint}'))
+                    # ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$75\%$ interval')
+                    # ax.axvline(confidence[i, 1], linestyle='--', color='b')
+                    if len(c_final_smooth.shape) == 1:
+                        ax.axvline(c_final_smooth[i], linestyle='--', color='r', label='max of joint pdf')
+                    elif len(c_final_smooth) < 4:
+                        for C in c_final_smooth:
+                            ax.axvline(C[i], linestyle='--', color='r', label='joint max')
                 ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
 
                 # if i == 0:
@@ -168,7 +164,7 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint
 
                 im = ax.imshow(data[str(i)+str(j)], origin='lower', cmap=cmap, aspect='auto',
                                extent=ext, vmin=0, vmax=max_value)
-            elif i > j:
+            elif i > j and smooth:
                 ax = plt.subplot2grid((N_params, N_params), (i, j))
                 ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
                 ext = (mirror_limits[j, 0], mirror_limits[j, 1], mirror_limits[i, 0], mirror_limits[i, 1])
@@ -198,5 +194,95 @@ def plot_marginal_smooth_pdf(data_folder, C_limits, mirror_limits, num_bin_joint
     # plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
 
     fig.subplots_adjust(left=0.20, right=0.80, wspace=0.1, hspace=0.1, bottom=0.1, top=0.98)
+    fig.savefig(os.path.join(plot_folder, f'marginal_{smooth}'))
+    plt.close('all')
+
+
+
+def plot_prior(params_names, C_limits, data_folder, plot_folder):
+    N_params = len(params_names)
+    max_value = 0.0
+    data = dict()
+    for i in range(N_params):
+        for j in range(N_params):
+            if i < j:
+                data[str(i) + str(j)] = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}{}'.format(i, j)))
+                max_value = max(max_value, np.max(data[str(i) + str(j)]))
+    max_value = int(max_value)
+    cmap = plt.cm.jet  # define the colormap
+    cmaplist = [cmap(i) for i in range(cmap.N)]  # extract all colors from the .jet map
+    # cmaplist[0] = 'black'   # force the first color entry to be black
+    cmaplist[0] = 'white'  # force the first color entry to be white
+    cmap = cmap.from_list('Custom cmap', cmaplist, max_value)
+
+    # confidence = np.loadtxt(os.path.join(path['output'], 'confidence'))
+    fig = plt.figure(figsize=(1.25 * fig_width, 1.1 * fig_width))
+    for i in range(N_params):
+        for j in range(N_params):
+            if i == j:
+                data_marg = np.loadtxt(os.path.join(data_folder, 'marginal_smooth{}'.format(i)))
+
+                ax = plt.subplot2grid((N_params, N_params), (i, i))
+                ax.plot(data_marg[0], data_marg[1])
+                c_final_smooth = np.loadtxt(os.path.join(os.path.join(data_folder, 'C_final_smooth')))
+                # ax.axvline(confidence[i, 0], linestyle='--', color='b', label=r'$90\%$ interval')
+                # ax.axvline(confidence[i, 1], linestyle='--', color='b')
+                if len(c_final_smooth.shape) == 1:
+                    ax.axvline(c_final_smooth[i], linestyle='--', color='r', label='MAP smooth')
+                elif len(c_final_smooth) < 4:
+                    for C in c_final_smooth:
+                        ax.axvline(C[i], linestyle='--', color='b', label='MAP smooth')
+
+                ax.axis(xmin=C_limits[i, 0], xmax=C_limits[i, 1], ymin=0)
+                ax.ticklabel_format(axis='x', style='sci', scilimits=(3, 15))
+                ax.set_xlabel(params_names[i], labelpad=2)
+                # if i == 0:
+                #     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # if i == 1:
+                #     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # if i == 2:
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # if i == 3:
+                #     ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+
+                # ax.yaxis.set_major_formatter(plt.NullFormatter())
+                # ax.yaxis.set_major_locator(plt.NullLocator())
+                # ax.tick_params(axis='both', which='minor', direction='in')
+                # ax.tick_params(axis='both', which='major', pad=0.8)
+
+                if i == 0:
+                    if N_params == 3:
+                        ax.legend(bbox_to_anchor=(2.35, -1.5), fancybox=True)
+                    elif N_params == 4:
+                        ax.legend(bbox_to_anchor=(3, -2.75), fancybox=True)
+                    textstr = '\n'.join((
+                        r'$C_1=%.3f$' % (c_final_smooth[0],),
+                        r'$C_2=%.3f$' % (c_final_smooth[1],),
+                        r'$C_{\epsilon1}=%.3f$' % (c_final_smooth[2],),
+                        r'$C_{\epsilon2}=%.3f$' % (c_final_smooth[3],)))
+                    ax.text(0.15, -1.6, textstr, transform=ax.transAxes, fontsize=12,
+                            verticalalignment='top', linespacing=1.5)
+            elif i < j:
+                ax = plt.subplot2grid((N_params, N_params), (i, j))
+                ax.axis(xmin=C_limits[j, 0], xmax=C_limits[j, 1], ymin=C_limits[i, 0], ymax=C_limits[i, 1])
+
+                # ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+                # ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                # ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
+                # ax.xaxis.set_major_formatter(plt.NullFormatter())
+                # ax.yaxis.set_tick_params(direction='in')
+
+                # ax.tick_params(axis='both', which='minor', direction='in')
+                # ax.tick_params(axis='both', which='major', pad=0.8)
+                ax.ticklabel_format(axis='x', style='sci', scilimits=(3, 15))
+                ext = (C_limits[j, 0], C_limits[j, 1], C_limits[i, 0], C_limits[i, 1])
+                im = ax.imshow(data[str(i) + str(j)], origin='lower', cmap=cmap, aspect='auto',
+                               extent=ext, vmin=0, vmax=max_value)
+    # cax = plt.axes([0.05, 0.1, 0.01, 0.26])
+    # plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
+    fig.subplots_adjust(left=0.03, right=0.98, wspace=0.3, hspace=0.1, bottom=0.1, top=0.98)
     fig.savefig(os.path.join(plot_folder, 'marginal_smooth'))
     plt.close('all')

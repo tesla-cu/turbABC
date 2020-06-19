@@ -5,6 +5,7 @@ import shutil
 # mpl.use('pdf')
 import numpy as np
 import plotting_2Dmarginals
+import plotting_change_with_eps
 import plotting
 # import plot_compare_truth
 
@@ -13,29 +14,30 @@ def main():
     basefolder = '../overflow_results/'
     nominal_values = None
     ### 4 params
-    nominal_values = [0.09, 0.5, 0.075, 0.0828]
-    params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$']
+    # nominal_values = [0.09, 0.5, 0.075, 0.0828, 0.31]
+    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$']
     # params_names = [r'$c_1$', r'$c_2$', r'$c_3$', r'$c_4$']
     # params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
-    num_bin_kde = 20
-    num_bin_raw = 10
+    # num_bin_kde = 20
+    # num_bin_raw = 10
 
-    ### 5 params
-    # nominal_values = [0.09, 0.5, 0.075, 0.0828, 0.31]
-    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$', r'$a_1$']
-    nominal_values = [0.09, 0.5, 0.075/0.09, 0.0828/0.09, 0.31]
-    params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
-    num_bin_kde = 10
-    num_bin_raw = 6
+    ## 5 params
+    # # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$', r'$a_1$']
+    # nominal_values = [0.09, 0.5, 0.075/0.09, 0.0828/0.09, 0.31]
+    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
+    # num_bin_kde = 15
+    # num_bin_raw = (6, 7+6, 6, 7, 8)
 
+    # # 4 params slice
+    nominal_values = [0.09, 0.075/0.09, 0.0828/0.09, 0.31]
+    params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
+    num_bin_kde = 15
+    num_bin_raw = [12]*4
 
-    path = {'output': os.path.join(basefolder, 'output/'), 'plots': os.path.join(basefolder, 'plots')}
+    path = {'output': os.path.join(basefolder, 'output4/'), 'plots': os.path.join(basefolder, 'plots')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
-
-    # stats = ['cp', 'u', 'uv', 'cp_u', 'cp_u_uv', 'x1', 'x2', 'x1_x2', 'all_if_less_05']
-    # postprocess_folders = [os.path.join(path['output'], 'postprocess_' + folder) for folder in stats]
 
     stats = glob.glob1(path['output'], "postprocess_*")     # different statistics
     postprocess_folders = [os.path.join(path['output'], folder) for folder in stats]
@@ -57,13 +59,15 @@ def main():
             # plot_compare_truth.plot_periodic(c, plot_folder)
             # plot_compare_truth.plot_decay(c, plot_folder)
             # plot_compare_truth.plot_strained(c, plot_folder)
-            plotting.plot_marginal_raw_pdf(folder, C_limits, num_bin_raw, params_names, plot_folder_x)
-            plotting_2Dmarginals.plot_marginal_smooth_pdf(folder, C_limits, num_bin_kde, params_names, plot_folder_x)
+            plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_raw, params_names, plot_folder_x)
+            plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_kde, params_names,
+                                                   plot_folder_x, smooth="smooth")
         ###################################################################################################################
         print("Plot change of marginal pdfs for different epsilon")
-
-        plotting.plot_marginal_change(folders_x, params_names, C_limits, num_bin_kde, plot_folder, nominal_values)
-        shutil.copy(os.path.join(plot_folder, 'marginal_change.pdf'),
+        plotting_change_with_eps.plot_marginal_change(folders_x, params_names, C_limits, 0, plot_folder, nominal_values)
+        plotting_change_with_eps.plot_marginal_change(folders_x, params_names, C_limits, num_bin_kde,
+                                                      plot_folder, nominal_values, smooth='smooth')
+        shutil.copy(os.path.join(plot_folder, 'marginal_change_smooth.pdf'),
                     os.path.join(path['plots'], f'marginal_change_{stats[k][12:]}.pdf'))
         # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, path['plots'])
         # plotting.plot_eps_change(folders, path['plots'])
