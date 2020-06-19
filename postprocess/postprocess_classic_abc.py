@@ -7,30 +7,32 @@ from pyabc.kde import find_MAP_kde, kdepy_fftkde, gaussian_kde_scipy
 from plotting.plotting import plot_dist_pdf
 
 
-def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, output_folder, i_stat):
-    logging.info('\n############# Classic ABC ############')
-    N_params, N_total = len(C_limits), len(result)
+def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, output_folder, i_stat, mirror):
+    N_total, N_params = result.shape
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
     # plot_dist_pdf(output_folder, dist, 0.1)
 
+    # C_limits_fftkde = np.array((np.min(result, axis=0), np.max(result, axis=0))).T
     ind = np.argsort(dist)
     accepted = result[ind]
+    logging.info('##################################################')
+    logging.info(f'There are {len(ind)} samples in {N_params}D space')
     dist = dist[ind]
+    logging.info('min dist = {} at {}'.format(dist[0], accepted[0]))
     for x in x_list:
         n = int(x * N_total)
-        folder = os.path.join(output_folder, 'x_{}'.format(x * 100))
+        folder = os.path.join(output_folder, f'x_{x * 100}')
         if not os.path.isdir(folder):
             os.makedirs(folder)
         logging.info('\n')
-        print(folder)
-        print('min dist = {} at {}'.format(np.min(dist), accepted[0]))
+        logging.info(f'x_{x * 100}: {n} samples accepted')
         accepted = accepted[:n, :N_params]
-        dist = dist[:n]
-        eps = np.max(dist)
+        eps = dist[n-1]
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, n, N_total))
-        marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder)
+        # marginal(accepted, C_limits_fftkde, num_bin_kde, num_bin_raw, folder)
+        marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder, mirror)
     del accepted, dist
     collect_MAP_values(output_folder, x_list, num_bin_kde)
     path_up = os.path.dirname(os.path.normpath(output_folder))
@@ -43,7 +45,7 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
         shutil.copy(os.path.join(output_folder, 'MAP_values'), os.path.join(job_folder, f'c_array_{i_stat}'))
 
 
-def marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder):
+def marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder, mirror=False):
 
     if not os.path.isdir(folder):
         os.makedirs(folder)
@@ -55,10 +57,13 @@ def marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder):
     del H
     # ##############################################################################
     logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
-    # mirrored_data, _ = pp.mirror_data_for_kde(accepted, C_limits[:, 0], C_limits[:, 1])
-    # left, right = np.min(mirrored_data, axis=0), np.max(mirrored_data, axis=0)
-    # Z = kdepy_fftkde(mirrored_data, left, right, num_bin_kde)
-    Z = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+    if mirror:
+        mirrored_data, _ = pp.mirror_data_for_kde(accepted, C_limits[:, 0], C_limits[:, 1])
+        print(f"{len(mirrored_data) - len(accepted)} points were added to {len(accepted)} points")
+        Z = gaussian_kde_scipy(mirrored_data, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+    else:
+        Z = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
+        # Z = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
     C_final_smooth = find_MAP_kde(Z, C_limits[:, 0], C_limits[:, 1])
     np.savetxt(os.path.join(folder, 'C_final_smooth' + str(num_bin_kde)), C_final_smooth)
     # np.savetxt(os.path.join(folder, 'mirrored_limits'), [left, right])
@@ -83,5 +88,5 @@ def collect_MAP_values(output_folder, x_list, n_bin_smooth):
 
     if len(MAP[0]) == 4:
         MAP = np.hstack((np.array(MAP), np.ones(len(MAP)).reshape(-1, 1)*0.31))
-        np.savetxt(os.path.join(output_folder, 'MAP_values'), MAP)
+    np.savetxt(os.path.join(output_folder, 'MAP_values'), MAP)
     return

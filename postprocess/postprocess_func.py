@@ -5,22 +5,24 @@ import itertools
 from pyabc.kde import gaussian_kde_scipy, bw_from_kdescipy
 from pyabc.utils import pdf_from_array_with_x, define_eps
 
+TINY = 1e-8
+
 
 def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits, weights=None):
 
     N_params = len(C_limits)
-    # C_final_joint
     C_final_joint = []
     H, edges = np.histogramdd(accepted, bins=num_bin_joint, range=C_limits, weights=weights)
     logging.debug('Max number in bin: {}'.format(np.max(H)))
     logging.debug('Mean number in bin: {}'.format(np.mean(H)))
-    edges = np.array(edges)
-    C_bin = (edges[:, :-1] + edges[:, 1:]) / 2  # shift value in the center of the bin
+    C_bin = []
+    for i in range(N_params):
+        C_bin.append((edges[i][:-1] + edges[i][1:]) / 2)  # shift value in the center of the bin
     ind = np.argwhere(H == np.max(H))
     for i in ind:
         point = []
         for j in range(N_params):
-            point.append(C_bin[j, i[j]])
+            point.append(C_bin[j][i[j]])
         C_final_joint.append(point)
     if len(ind) > 10:
         logging.warning('Can not estimate parameters from joint pdf!'
@@ -29,6 +31,25 @@ def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits, weights=None):
     else:
         logging.info('Estimated parameters from joint pdf: {}'.format(C_final_joint))
     return H, C_final_joint
+
+
+def calc_marginal_pdf_raw(accepted, num_bin_joint, C_limits, path, weights=None):
+    # TODO: add check for num_bin_joint being int or tuple
+    N_params = len(C_limits)
+    for i in range(N_params):
+        for j in range(N_params):
+            if i == j:
+                x, y = pdf_from_array_with_x(accepted[:, i], bins=num_bin_joint[i], range=C_limits[i])
+                np.savetxt(os.path.join(path, 'marginal_{}'.format(i)), [x, y])
+            elif i < j:
+                # note: the histogram does not follow the Cartesian convention x values are on the abscissa and y values
+                # on the ordinate axis. Rather, x is histogrammed along the first dimension of the array (vertical),
+                # and y along the second dimension of the array (horizontal)
+                H, xedges, yedges = np.histogram2d(x=accepted[:, i], y=accepted[:, j],
+                                                   bins=[num_bin_joint[i], num_bin_joint[j]],
+                                                   range=[C_limits[i], C_limits[j]], density=1, weights=weights)
+                np.savetxt(os.path.join(path, 'marginal_{}{}'.format(i, j)), H)
+                # np.savetxt(os.path.join(path, 'marginal_bins{}{}' .format(i, j)), [xedges, yedges])
 
 
 def calc_conditional_pdf_smooth(Z, data_folder):
@@ -67,23 +88,6 @@ def calc_marginal_pdf_smooth(Z, num_bin_joint, C_limits, data_folder):
                 np.savetxt(os.path.join(data_folder, 'marginal_smooth{}{}'.format(i, j)), H)
 
 
-def calc_marginal_pdf_raw(accepted, num_bin_joint, C_limits, path):
-    N_params = len(C_limits)
-    for i in range(N_params):
-        for j in range(N_params):
-            if i == j:
-                x, y = pdf_from_array_with_x(accepted[:, i], bins=num_bin_joint, range=C_limits[i])
-                np.savetxt(os.path.join(path, 'marginal_{}'.format(i)), [x, y])
-            elif i < j:
-                # note: the histogram does not follow the Cartesian convention x values are on the abscissa and y values
-                # on the ordinate axis. Rather, x is histogrammed along the first dimension of the array (vertical),
-                # and y along the second dimension of the array (horizontal)
-                H, xedges, yedges = np.histogram2d(x=accepted[:, i], y=accepted[:, j], bins=num_bin_joint,
-                                                   range=[C_limits[i], C_limits[j]], density=1)
-                np.savetxt(os.path.join(path, 'marginal{}{}'.format(i, j)), H)
-                np.savetxt(os.path.join(path, 'marginal_bins{}{}' .format(i, j)), [xedges, yedges])
-
-
 def marginal_confidence(N_params, path, level):
 
     confidence = np.zeros((N_params, 2))
@@ -100,22 +104,22 @@ def marginal_confidence(N_params, path, level):
     np.savetxt(os.path.join(path, 'confidence_{}'.format(int(100*(1-level)))), confidence)
 
 
-def marginal_confidence_joint(accepted, path, level):
-
-    N_params = len(accepted[0])
-    confidence = np.zeros((N_params, 2))
-    for i in range(N_params):
-        # accepted_tmp = np.sort(accepted[:, i])
-        accepted_tmp = accepted[:, i]
-        confidence[i, 0] = np.percentile(accepted_tmp, int(100*level))
-        confidence[i, 1] = np.percentile(accepted_tmp, int(100*(1-level)))
-    np.savetxt(os.path.join(path, 'quantile_{}'.format(int((1-level)*100))), confidence)
+# def marginal_confidence_joint(accepted, path, level):
+#
+#     N_params = len(accepted[0])
+#     confidence = np.zeros((N_params, 2))
+#     for i in range(N_params):
+#         # accepted_tmp = np.sort(accepted[:, i])
+#         accepted_tmp = accepted[:, i]
+#         confidence[i, 0] = np.percentile(accepted_tmp, int(100*level))
+#         confidence[i, 1] = np.percentile(accepted_tmp, int(100*(1-level)))
+#     np.savetxt(os.path.join(path, 'quantile_{}'.format(int((1-level)*100))), confidence)
 
 
 def mirror_data_for_kde(points, left, right, weights=None):
 
     # checking the equation of ellipse with the given point
-    inside_ellipse = lambda point, corner: 0 < np.sum(np.power(point - corner, 2) / np.power(size, 2)) < 1
+    inside_ellipse = lambda point, corner: TINY < np.sum(np.power(point - corner, 2) / np.power(size, 2)) < 1
 
     def get_corners(left, right):
         n_params = len(left)
@@ -127,6 +131,7 @@ def mirror_data_for_kde(points, left, right, weights=None):
     k = 1  # coefficient for reflection interval
     size = k * bw_from_kdescipy(points)
     print('percent of interval to reflect', size / (np.array(right) - np.array(left)))
+    # print('size/bin', size/((np.array(right) - np.array(left)) / np.array([5, 5, 6, 7])))
 
     new_points = list(points)
     if weights:
@@ -139,7 +144,7 @@ def mirror_data_for_kde(points, left, right, weights=None):
         # axis reflection:
         for i, p in enumerate(point):
             for lim in [left[i], right[i]]:
-                if 0 < np.abs(p - lim) < size[i]:
+                if TINY < np.abs(p - lim) < size[i]:
                     point_new = point
                     point_new[i] = 2*lim - p
                     new_points.append(point_new)
@@ -147,7 +152,7 @@ def mirror_data_for_kde(points, left, right, weights=None):
         # point reflection
         for corner in corners:
             if inside_ellipse(point, corner):
-                point_new = 2 * corner - point
+                point_new = 2 * np.array(corner) - point
                 new_points.append(point_new)
                 new_weights.append(w)
     return np.array(new_points), np.array(new_weights)

@@ -4,10 +4,12 @@ import os
 import sys
 import itertools
 
-basefolder = '../overflow_results/output/'
-N_params = 5
-N_per_dim = 6
-N_jobs = 45
+basefolder = '../overflow_results/output4/'
+N_params = 4
+ind_param_nominal = 1
+N_per_dim = 10
+# N_per_dim = [6, 7, 6, 7, 8]
+N_jobs = 120
 
 C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
@@ -18,19 +20,24 @@ C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, be
 #             [0.05, 1.6],       # beta2
 #             [0.27, 0.36]]       # a1
 b_bstar = True
-C_limits = [[0.07, 0.18],   # beta_st
-            [0.2, 1.6],         # sigma_w1
-            [0.14, 1.27],       # beta1/beta*
-            [0.27, 23],       # beta2/beta*
-            [0.27, 0.36]]       # a1
+# C_limits = [[0.07, 0.18],   # beta_st
+#             [0.08333333333333325, 1.48333333],         # sigma_w1
+#             [0.14, 1.27],       # beta1/beta*
+#             [-3.5183333333333326, 23],       # beta2/beta*
+#             [0.24, 0.36]]       # a1
+
+C_limits = [[0.07, 0.2],   # beta_st
+            [0.14, 1.5],       # beta1/beta*
+            [-0.85, 20],       # beta2/beta*
+            [0.24, 0.36]]       # a1
 
 # if need to add points in the end of file
-add = 1
-N_per_dim2 = [6, 6, 6, 6, 8]
+add = 0
+N_per_dim2 = [6, 7, 6, 7, 8]
 C_limits2 = [[0.07, 0.18],   # beta_st
-             [0.2, 1.6],         # sigma_w1
+             [-0.03333333333333344, 1.6],         # sigma_w1
              [0.14, 1.27],       # beta1/beta*
-             [0.27, 23],       # beta2/beta*
+             [-3.5183333333333326, 23],       # beta2/beta*
              [0.24, 0.36]]       # a1
 
 
@@ -65,15 +72,22 @@ def calc_N(N_total, N_jobs):
     return N
 
 
+def add_nominal_param(c_array, ind, nominal_values):
+    c_nominal_array = (np.ones((len(c_array), 1)) * nominal_values[ind])
+    return np.hstack((c_array[:, :ind], c_nominal_array, c_array[:, ind:]))
+
+
 def main():
 
-    N_total = N_per_dim**N_params
+    N_total = N_per_dim**N_params if np.isscalar(N_per_dim) else np.prod(N_per_dim)
+
     N = calc_N(N_total, N_jobs)
     C_array = sampling_uniform_grid(N_per_dim, C_limits)
-    if N_params < 5:
-        c_nominal_array = np.array([C_nominal[N_params:]]*len(C_array))
-        C_array = np.hstack((C_array, c_nominal_array))
-    print('N samples = ', len(C_array))
+    if N_params == 4:
+        C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal)
+
+    N_samples = len(C_array)
+    print('N samples = ', N_samples)
     ###################################################################################################################
     #
     ###################################################################################################################
@@ -86,10 +100,10 @@ def main():
                 C_array_add.append(c)
         N_total += len(C_array_add)
         N = calc_N(N_total, N_jobs)
-        if N_params < 5:
-            c_nominal_array = np.array([C_nominal[N_params:]]*len(C_array_add))
-            C_array_add = np.hstack((C_array_add, c_nominal_array))
-        print('N samples = ', len(C_array_add))
+        if N_params == 4:
+            C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal)
+        N_samples = len(C_array_add)
+        print('N samples = ', N_samples)
         C_array = np.vstack((C_array, C_array_add))
         print("C_array.shape:", C_array.shape)
     ###################################################################################################################
@@ -110,6 +124,9 @@ def main():
         np.savetxt(os.path.join(dir, 'c_array_{}'.format(i)), C_array[start:end])
 
     np.savetxt(os.path.join(basefolder, 'C_limits_init'), C_limits)
+    # TODO: plot histogram to check that uniform
+    print(f'{N_samples} samples in {N_jobs} jobs')
+    print(f"{N_samples*7/60/N_jobs} hours for 1 job")
 
 
 if __name__ == '__main__':

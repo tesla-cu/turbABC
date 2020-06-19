@@ -48,10 +48,10 @@ def main():
 
     if not sys.argv[1] == 'nominal':
         n_job = int(sys.argv[1])
+    output_folder = sys.argv[2]
     N_proc = 1     # number of processors to run overflow
 
     basefolder = './'
-    output_folder = '../output'
     data_folder = os.path.join(basefolder, 'valid_data', )
     job_folder = os.path.join(output_folder, 'calibration_job{}'.format(n_job))
     # exe_dir = '/nobackup/odoronin/over2.2n/'

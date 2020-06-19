@@ -9,17 +9,26 @@ class TruthData(object):
         self.norm = np.empty((0,))
         if 'cp' in case:
             self.cp = np.loadtxt(os.path.join(valid_folder, 'experiment_cp.txt'))
-            self.norm = np.hstack((self.norm, np.max(np.abs(self.cp[:, 1]))*np.ones(len(self.cp[:, 1]))))
+            number_of_datapoints = len(self.cp[:, 1])
+            norm = np.max(np.abs(self.cp[:, 1])) * np.ones(number_of_datapoints)
+            norm *= np.sqrt(number_of_datapoints)      # !!! use only with norm2
+            self.norm = np.hstack((self.norm, norm))
             self.sumstat_true = np.hstack((self.sumstat_true, self.cp[:, 1]))
             self.length.append(len(self.sumstat_true))
         if 'u' in case:
             self.x, self.u_flat, self.u = readfile_with_zones(os.path.join(valid_folder, 'experiment_u.txt'))
-            self.norm = np.hstack((self.norm, np.max(np.abs(self.u_flat[:, 0]))*np.ones(len(self.u_flat[:, 0]))))
+            number_of_datapoints = len(self.u_flat[:, 0])
+            norm = np.max(np.abs(self.u_flat[:, 0]))*np.ones(number_of_datapoints)
+            norm *= np.sqrt(number_of_datapoints)      # !!! use only with norm2
+            self.norm = np.hstack((self.norm, norm))
             self.sumstat_true = np.hstack((self.sumstat_true, self.u_flat[:, 0]))
             self.length.append(len(self.sumstat_true))
         if 'uv' in case:
             self.x, self.uv_flat, self.uv = readfile_with_zones(os.path.join(valid_folder, 'experiment_uv.txt'))
-            self.norm = np.hstack((self.norm, np.max(np.abs(self.uv_flat[:, 0]))*np.ones(len(self.uv_flat[:, 0]))))
+            number_of_datapoints = len(self.uv_flat[:, 0])
+            norm = np.max(np.abs(self.uv_flat[:, 0]))*np.ones(number_of_datapoints)
+            norm *= np.sqrt(number_of_datapoints)      # !!! use only with norm2
+            self.norm = np.hstack((self.norm, norm))
             self.sumstat_true = np.hstack((self.sumstat_true, -self.uv_flat[:, 0]))
             self.length.append(len(self.sumstat_true))
         if 'x_separation' in case:
