@@ -23,6 +23,8 @@ Strain = None
 # overflow
 Grid = None
 job_folder = None
+restart_chain = None
+save_chain_step = False
 
 # les model
 SumStat = None
