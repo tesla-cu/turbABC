@@ -7,9 +7,9 @@ import itertools
 basefolder = '../overflow_results/output4/'
 N_params = 4
 ind_param_nominal = 1
-N_per_dim = 10
+N_per_dim = 12
 # N_per_dim = [6, 7, 6, 7, 8]
-N_jobs = 120
+N_jobs = 200
 
 C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
@@ -84,7 +84,7 @@ def main():
     N = calc_N(N_total, N_jobs)
     C_array = sampling_uniform_grid(N_per_dim, C_limits)
     if N_params == 4:
-        C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal)
+        C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal[ind_param_nominal]*np.ones(N_total))
 
     N_samples = len(C_array)
     print('N samples = ', N_samples)
