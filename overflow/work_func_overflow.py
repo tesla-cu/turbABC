@@ -18,10 +18,10 @@ def work_function(overflow, c, i):
 
     logging.debug('Calibration {}: {}'.format(i, c))
     overflow.write_inputfile(c)
-    overflow.run_overflow(i)    # run overflow
+    overflow.run_overflow()    # run overflow
     os.rename(os.path.join(g.job_folder, 'q.save'), os.path.join(g.job_folder, 'q.restart'))  # rename
     overflow.write_debug()
-    overflow.run_overflow(i)    # run debug to get q.turb file
+    overflow.run_overflow()    # run debug to get q.turb file
     cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice, u_surface, x_shock = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
     sum_stat_cp = calc_sum_stat(g.Grid.grid_x[::-1], cp[::-1], g.Truth.cp[:, 0])
     sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv, x_shock))
@@ -31,15 +31,17 @@ def work_function(overflow, c, i):
     return result, cp, u_slice, uv_slice, u_surface
 
 
-def work_function_chain(overflow, c, i):
+def work_function_chain(c):
 
-    logging.debug(f'Chain step {i}: {c}')
+    logging.debug(f'Chain step: {c}')
+    overflow = g.overflow
     overflow.write_inputfile(c)
-    overflow.run_overflow(i)    # run overflow
+    overflow.run_overflow()    # run overflow
     os.rename(os.path.join(g.job_folder, 'q.save'), os.path.join(g.job_folder, 'q.restart'))  # rename
     overflow.write_debug()
-    overflow.run_overflow(i)    # run debug to get q.turb file
-    cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice, u_surface, x_shock = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
+    overflow.run_overflow()    # run debug to get q.turb file
+    output_tuple = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
+    cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice, u_surface, x_shock = output_tuple
     sum_stat_cp = calc_sum_stat(g.Grid.grid_x[::-1], cp[::-1], g.Truth.cp[:, 0])
     sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv, x_shock))
     err = calc_err(sum_stat[:-2]/g.Truth.norm[:-2], g.Truth.sumstat_true[:-2])

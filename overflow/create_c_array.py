@@ -7,7 +7,7 @@ import itertools
 basefolder = '../overflow_results/output4/'
 N_params = 4
 ind_param_nominal = 1
-N_per_dim = 12
+N_per_dim = 10
 # N_per_dim = [6, 7, 6, 7, 8]
 N_jobs = 200
 
@@ -32,13 +32,12 @@ C_limits = [[0.07, 0.2],   # beta_st
             [0.24, 0.36]]       # a1
 
 # if need to add points in the end of file
-add = 0
-N_per_dim2 = [6, 7, 6, 7, 8]
-C_limits2 = [[0.07, 0.18],   # beta_st
-             [-0.03333333333333344, 1.6],         # sigma_w1
-             [0.14, 1.27],       # beta1/beta*
-             [-3.5183333333333326, 23],       # beta2/beta*
-             [0.24, 0.36]]       # a1
+add = 1
+N_per_dim2 = [12, 12, 12, 12]
+C_limits2 = [[0.0505, 0.2],   # beta_st
+             [0.14, 1.704],       # beta1/beta*
+             [-0.85, 23.1275],       # beta2/beta*
+             [0.222, 0.36]]       # a1
 
 
 def sampling_uniform_grid(N_each, C_limits):
@@ -73,6 +72,7 @@ def calc_N(N_total, N_jobs):
 
 
 def add_nominal_param(c_array, ind, nominal_values):
+    c_array = np.array(c_array)
     c_nominal_array = (np.ones((len(c_array), 1)) * nominal_values[ind])
     return np.hstack((c_array[:, :ind], c_nominal_array, c_array[:, ind:]))
 
@@ -84,7 +84,7 @@ def main():
     N = calc_N(N_total, N_jobs)
     C_array = sampling_uniform_grid(N_per_dim, C_limits)
     if N_params == 4:
-        C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal[ind_param_nominal]*np.ones(N_total))
+        C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal)
 
     N_samples = len(C_array)
     print('N samples = ', N_samples)
@@ -99,12 +99,15 @@ def main():
             if bool_outside:
                 C_array_add.append(c)
         N_total += len(C_array_add)
-        N = calc_N(N_total, N_jobs)
+        # N = calc_N(N_total, N_jobs)
         if N_params == 4:
-            C_array = add_nominal_param(C_array, ind_param_nominal, C_nominal)
-        N_samples = len(C_array_add)
-        print('N samples = ', N_samples)
-        C_array = np.vstack((C_array, C_array_add))
+            C_array_add = add_nominal_param(C_array_add, ind_param_nominal, C_nominal)
+
+        N_newsamples = len(C_array_add)
+        print('N new samples = ', N_newsamples)
+        N = calc_N(N_newsamples, N_jobs)
+        C_array = C_array_add.copy()
+        # C_array = np.vstack((C_array, C_array_add))
         print("C_array.shape:", C_array.shape)
     ###################################################################################################################
     #
@@ -125,6 +128,7 @@ def main():
 
     np.savetxt(os.path.join(basefolder, 'C_limits_init'), C_limits)
     # TODO: plot histogram to check that uniform
+
     print(f'{N_samples} samples in {N_jobs} jobs')
     print(f"{N_samples*7/60/N_jobs} hours for 1 job")
 

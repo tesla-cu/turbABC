@@ -11,7 +11,7 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
     N_total, N_params = result.shape
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
-    # plot_dist_pdf(output_folder, dist, 0.1)
+    plot_dist_pdf(output_folder, dist, 0.0134)
 
     # C_limits_fftkde = np.array((np.min(result, axis=0), np.max(result, axis=0))).T
     ind = np.argsort(dist)
@@ -70,7 +70,7 @@ def marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder, mirror=False)
     logging.info('Estimated parameters from joint pdf: {}'.format(C_final_smooth))
     # ##############################################################################
     np.savez(os.path.join(folder, 'Z.npz'), Z=Z)
-    Z = np.load(os.path.join(folder, 'Z.npz'))['Z']
+    # Z = np.load(os.path.join(folder, 'Z.npz'))['Z']
     pp.calc_marginal_pdf_smooth(Z, num_bin_kde, C_limits, folder)
     pp.calc_conditional_pdf_smooth(Z, folder)
     del Z

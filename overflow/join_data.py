@@ -10,7 +10,7 @@ N_PARAMS = 5    # output from overflow is always 5 parameters (some of them may 
 
 
 def load_data(folders, len_sumstat, check_length=False):
-    N_total = 0
+    N_total, diff = 0, 0
     result = np.empty((0, N_PARAMS + len_sumstat + 1))   # + 5 parameters in the beginning and distance in the end
     for i, folder in enumerate(folders):
         print('job {}'.format(i))
@@ -51,7 +51,7 @@ def main():
 
     basefolder = '../'
     ### Paths
-    path = {'output': os.path.join(basefolder, 'overflow_results/output4/'),
+    path = {'output': os.path.join(basefolder, 'overflow_results/output_4/'),
             'valid_data': '../overflow/valid_data/'}
     if not os.path.isdir(path['output']):
         os.makedirs(path['output'])
@@ -61,11 +61,13 @@ def main():
         handlers=[logging.FileHandler(os.path.join(path['output'], 'ABC_postprocess.log')), logging.StreamHandler()],
         level=logging.DEBUG)
 
-    N_jobs = [60]
+    N_jobs = [120, 200]
+    raw_folders = ['output_4_part1', 'output_4_part2']
     N_params = 4  # number of non-constant parameters
+
     take_slice = False   # takes 4D slice at sigma = 0.55
     b_bstar = True
-    data_folders = [os.path.join(basefolder, 'overflow_results', folder) for folder in ['output4']]
+    data_folders = [os.path.join(basefolder, 'overflow_results', folder) for folder in raw_folders]
     print('data folders to join:', data_folders)
 
     # We need truth statistics only to know length when loading data
@@ -79,7 +81,7 @@ def main():
         folders = [os.path.join(data_folder, 'calibration_job{}'.format(n), ) for n in range(N_jobs[i])]
         result = load_data(folders, sumstat_length, check_length=True)  # to check length need c_array_* files
 
-        if b_bstar:     # beta1 and beta2 have different indices (because sigma parameter removed in 4 parameter case)
+        if b_bstar:
             result[:, 2] /= result[:, 0]    # beta1/beta*
             result[:, 3] /= result[:, 0]    # beta2/beta*
 
@@ -95,6 +97,8 @@ def main():
     np.savez(os.path.join(path['output'], 'joined_data.npz'),
              c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
 
+
+    ####################################################################################################
     # # ### taking slice
     if N_params == 5 and take_slice:
         c_array = np.load(os.path.join(path['output'], 'joined_data.npz'))['c_array']

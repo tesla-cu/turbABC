@@ -19,8 +19,10 @@ class Overflow(object):
             self.input_lines = file_template.readlines()
 
     def write_inputfile(self, c):
-        self.input_lines[7] = f'    OD_BETAST = {c[0]}, OD_BETA1 = {c[2]}, OD_BETA2 = {c[3]}, OD_SIGW1 = {c[1]},\n'
-        self.input_lines[8] = f'    OD_A1 = {c[4]},\n'
+        c[1] *= c[0]
+        c[2] *= c[0]
+        self.input_lines[7] = f'    OD_BETAST = {c[0]}, OD_BETA1 = {c[1]}, OD_BETA2 = {c[2]}, OD_SIGW1 = 0.5,\n'
+        self.input_lines[8] = f'    OD_A1 = {c[3]},\n'
         with open(os.path.join(self.job_folder, 'over.namelist'), 'w') as f:
             f.writelines(self.input_lines)
 
@@ -30,7 +32,7 @@ class Overflow(object):
         with open(os.path.join(self.job_folder, 'over.namelist'), 'w') as f:
             f.writelines(add_debug_line)
 
-    def run_overflow(self, i):
+    def run_overflow(self):
         exe = os.path.join(self.exe_path, 'a.out')
         outfile = os.path.join(self.job_folder, 'over.out')
         # Run overflow

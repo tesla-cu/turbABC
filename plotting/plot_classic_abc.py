@@ -34,7 +34,7 @@ def main():
     num_bin_kde = 15
     num_bin_raw = [12]*4
 
-    path = {'output': os.path.join(basefolder, 'output4/'), 'plots': os.path.join(basefolder, 'plots')}
+    path = {'output': os.path.join(basefolder, 'output_4/'), 'plots': os.path.join(basefolder, 'plots')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
