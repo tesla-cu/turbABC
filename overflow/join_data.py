@@ -77,6 +77,7 @@ def main():
     logging.info('Loading data')
     c_array = np.empty((0, N_params))
     sumstat_all = np.empty((0, sumstat_length))
+    dist = []
     for i, data_folder in enumerate(data_folders):
         folders = [os.path.join(data_folder, 'calibration_job{}'.format(n), ) for n in range(N_jobs[i])]
         result = load_data(folders, sumstat_length, check_length=True)  # to check length need c_array_* files
@@ -90,13 +91,14 @@ def main():
 
         c_array = np.vstack((c_array, result[:, :N_params]))
         sumstat_all = np.vstack((sumstat_all, result[:, N_params:-1]))
+        dist.append(np.min(result[:, -1]))
+    print(np.min(dist))
 
     N_total = len(c_array)
     print(f'There are {N_total} samples in {N_params}D space')
     C_limits = define_limits_for_uniform(c_array)
     np.savez(os.path.join(path['output'], 'joined_data.npz'),
              c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
-
 
     ####################################################################################################
     # # ### taking slice

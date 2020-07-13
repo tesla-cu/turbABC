@@ -8,6 +8,7 @@ N_params = None
 eps = 0.0
 std = 0.0
 t0 = 0
+c_array = None
 
 Truth = None
 case = None
@@ -26,7 +27,9 @@ Grid = None
 job_folder = None
 restart_chain = None
 save_chain_step = False
+save_failed_step = False
 overflow = None
+
 
 # les model
 SumStat = None

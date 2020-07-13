@@ -11,7 +11,7 @@ from pyabc.utils import timer
 import pyabc.glob_var as g
 import pyabc.abc_alg as abc_alg
 
-from overflow.work_func_overflow import work_function_chain, save_chain_step
+from overflow.work_func_overflow import work_function_chain, save_chain_step, save_failed_step, restart_chain
 from overflow.overflow_driver import Overflow
 import overflow.sumstat as sumstat
 
@@ -25,6 +25,7 @@ def main():
 
     # N_proc = 16
     N_proc = 4
+    g.t0 = 10
     # basefolder = '/nobackup/odoronin/overflow/'
     basefolder = './'
     # data_folder = os.path.join(basefolder, 'valid_data', )
@@ -36,6 +37,7 @@ def main():
     g.path = {'output': job_folder}
     g.restart_chain = False
     g.save_chain_step = save_chain_step
+    g.save_failed_step = save_failed_step
     g.work_function = work_function_chain
 
     logPath = job_folder
@@ -45,23 +47,15 @@ def main():
         level=logging.DEBUG)
     ################################################################################
     c_init = np.loadtxt(os.path.join(job_folder, f'C_start'))
-    done = 0
+    g.eps = np.loadtxt(os.path.join(job_folder, 'eps'))
+    g.std = np.loadtxt(os.path.join(job_folder, 'std'))
     if os.path.exists(os.path.join(job_folder, 'C_limits')):
         g.C_limits = np.loadtxt(os.path.join(job_folder, 'C_limits'))
     result_file = os.path.join(job_folder, 'result.dat')
     logging.info(result_file)
-    logging.info(f"restart: {os.path.exists(result_file)}")
-    if os.path.exists(result_file):
-        with open(result_file) as f:
-            lines = f.readlines()
-            done = len(lines)
-            last_result = np.fromstring(lines[-1][1:-1], dtype=float, sep=',')
-            last_c = last_result[:N_PARAMS]
-        logging.info(f'Restart from {done} step with c = {last_c}')
-        c_init = last_c
-        g.restart_chain = True
-        g.t0 = 0
-    np.savetxt(os.path.join(g.path['output'], f'C_start_{done}'), c_init)
+    ####### Restart ###############################
+    restart_chain(result_file, N_PARAMS, g.t0, c_init)
+    ###############################################
     if not os.path.exists(os.path.join(job_folder, 'grid.in')):
         try:
             shutil.copy(os.path.join(data_folder, 'grid.in'), job_folder)
@@ -77,7 +71,6 @@ def main():
 
     logging.info('Chains')
     g.N_per_chain = 1500  # long queue is 120 hours and approx. 1090 overflow runs
-    g.t0 = 100
     abc_alg.one_chain(chain_id=0)
 
 

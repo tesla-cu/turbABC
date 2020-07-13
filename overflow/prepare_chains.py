@@ -32,12 +32,13 @@ logging.info('\n############# POSTPROCESSING ############')
 data_file = 'joined_data.npz'
 
 
-x = 0.0134
-lim = 0.1
-N_chains = 75
+x = 0.03
+lim = 0.25
+N_chains = 200
 num_bin_kde = 15
 num_bin_raw = [12]*4
 mirror = True
+chain_with_limits = False
 
 
 job_folders = [os.path.join(chains_folder, f'chain_{n_job}') for n_job in range(N_chains)]
@@ -97,10 +98,14 @@ if N_chains > n:
     logging.infor("random choice with replacing")
 random_ind = np.random.choice(n, N_chains, replace=replace)
 C_start = accepted[random_ind]
+dist_init = dist[random_ind]
 np.set_printoptions(precision=4)
 logging.info('starting parameters for MCMC chains:\n{}'.format(C_start))
 for i, n_job in enumerate(job_folders):
     np.savetxt(os.path.join(n_job, 'C_start'), C_start[i])
+    np.savetxt(os.path.join(n_job, 'dist_init'), C_start[i])
+    if chain_with_limits:
+        np.savetxt(os.path.join(n_job, 'C_limits'), C_limits)
 
 logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
 if mirror:
@@ -111,6 +116,7 @@ else:
     # Z = kdepy_fftkde(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
     Z = gaussian_kde_scipy(accepted, C_limits[:, 0], C_limits[:, 1], num_bin_kde)
 C_MAP_smooth = find_MAP_kde(Z, C_limits[:, 0], C_limits[:, 1])
+print('C_MAP_smooth', C_MAP_smooth)
 np.savetxt(os.path.join(job_folders[0], 'C_start'), C_MAP_smooth)
 logging.info('Estimated parameters from joint pdf: {}'.format(C_MAP_smooth))
 # ##############################################################################

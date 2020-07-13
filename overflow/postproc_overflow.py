@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import os
 from overflow.sumstat import TruthData
-from pyabc.distance import calc_err_norm2
+from pyabc.distance import calc_err_norm2, calc_err_norm1
 from pyabc.abc_alg import calibration_postprocess1
 from postprocess.postprocess_classic_abc import output_by_percent
 
@@ -49,16 +49,22 @@ def main():
     print(f'There are {N_total} samples total in {N_params}D space')
     # !!! stored summary statistics are not divided by norm
     ####################################################################
-    # x1+x2 statistics
-    print('x1+x2 statistics')
-    dist = dist_by_sumstat(sumstat_all[:, Truth.length[2]:], sumstat_true[Truth.length[2]:])
-    output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
-                      os.path.join(path['output'], 'postprocess_x1_x2'), i_stat=17, mirror=mirror)
-    dist_x = dist.copy()
+    # # x1+x2 statistics
+    # print('x1+x2 statistics')
+    # dist = dist_by_sumstat(sumstat_all[:, Truth.length[2]:], sumstat_true[Truth.length[2]:])
+    # output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
+    #                   os.path.join(path['output'], 'postprocess_x1_x2'), i_stat=17, mirror=mirror)
+    # dist_x = dist.copy()
     ####################################################################
     # cp + u + uv statistics
     print('cp + U + uv statistics')
     dist = dist_by_sumstat(sumstat_all[:, :Truth.length[2]] / norm[:Truth.length[2]], sumstat_true[:Truth.length[2]])
+    dist2 = np.empty(len(sumstat_all))
+    for i, line in enumerate(sumstat_all):
+        dist2[i] = calc_err_norm2(line[:Truth.length[2]] / Truth.norm[:Truth.length[2]], Truth.sumstat_true[:Truth.length[2]])
+    print(np.min(dist), np.min(dist2))
+    print(Truth.norm[:Truth.length[2]])
+    exit()
     output_by_percent(c_array, dist, C_limits, x_list, num_bin_raw, num_bin_kde,
                       os.path.join(path['output'], 'postprocess_cp_u_uv'), i_stat=4, mirror=mirror)
     dist_all = dist.copy()

@@ -183,31 +183,47 @@ def one_chain(chain_id):
 
     # add first param
     if not g.restart_chain:
-        result_c[0], result_sumstat[0], result_dist[0] = result_split(g.work_function(C_init), N_params)
+        result, other = g.work_function(C_init)
+        logging.info(f'dist = {result[-1]}, eps = {g.eps}')
+        result_c[0], result_sumstat[0], result_dist[0] = result_split(result, N_params)
+        start = 0
         counter_sample = 0
         counter_dist = 0
-        mean_prev = 0
-        cov_prev = 0
-
+        mean_prev = C_init
+        cov_prev = g.std
+        g.save_chain_step(result, cov_prev, 0, counter_sample, counter_dist, other)
         # for adaptive eps
         if g.target_acceptance is not None:
             delta = result_dist[0]
             g.std = np.sqrt(0.1 * (C_limits[:, 1] - C_limits[:, 0]))
             target_acceptance = g.target_acceptance
+    else:
+        mean_prev = np.loadtxt(os.path.join(g.path['output'], f'C_start_{g.restart_chain}')).reshape((-1, N_params))[chain_id]
+        cov_prev = g.std
+        start, counter_sample, counter_dist = np.loadtxt(os.path.join(g.path['output'], 'counter'), dtype=np.int32)[-1]
+        if g.restart_chain < g.t0:
+            result_c[:start+1] = g.c_array
+        else:
+            result_c[0] = C_init
     ####################################################################################################################
     def mcmc_step_nolimits(i):
         nonlocal mean_prev, cov_prev, counter_sample, counter_dist
         while True:
             counter_sample += 1
             c = chain_kernel(result_c[i - 1], s_d*cov_prev)
+            logging.debug(f'new sample {c}, {result_c[i - 1]}, {s_d * cov_prev}')
             result, *other = g.work_function(c)
+            logging.info(f'dist = {result[-1]}, eps = {g.eps}')
             counter_dist += 1
             if result[-1] <= g.eps:  # distance < epsilon
                 result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
                 break
+            else:
+                g.save_failed_step(result, i, counter_sample, counter_dist)
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return other
+        return result, other
+
     ####################################################################################################################
     def mcmc_step(i):
         nonlocal mean_prev, cov_prev, counter_sample, counter_dist
@@ -217,14 +233,19 @@ def one_chain(chain_id):
                 c = chain_kernel(result_c[i - 1], s_d*cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
-            result, *other = g.work_function(c)
+            result, other = g.work_function(c)
+            logging.info(f'dist = {result[-1]}, eps = {g.eps}')
             counter_dist += 1
             if result[-1] <= g.eps:  # distance < epsilon
                 result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
                 break
+            else:
+                g.save_failed_step(result, i-1, counter_sample, counter_dist)
+        logging.debug(f"accepted {result_c[i]}")
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return other
+        logging.debug(f'len(other) = {len(other)}')
+        return result, other
 
     ####################################################################################################################
     def mcmc_step_prior(i):
@@ -244,7 +265,7 @@ def one_chain(chain_id):
                     break
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return other
+        return result, other
 
     ####################################################################################################################
     def mcmc_step_adaptive(i):
@@ -265,7 +286,7 @@ def one_chain(chain_id):
                 delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return other
+        return result, other
     #######################################################
     # Markov Chain
     # if changed prior after calibration step
@@ -273,32 +294,33 @@ def one_chain(chain_id):
         mcmc_step = mcmc_step_prior
     elif g.target_acceptance is not None:
         mcmc_step = mcmc_step_adaptive
-    elif C_limits:
+    elif C_limits is not None:
         mcmc_step = mcmc_step
     else:
         mcmc_step = mcmc_step_nolimits
 
-    print(mcmc_step.__name__())
-    exit()
-    if not g.restart_chain[chain_id]:
-        # burn in period with constant variance
-        chain_kernel = chain_kernel_const
-        for i in range(1, min(g.t0, N)):
-            mcmc_step(i)
-        # define mean and covariance from burn-in period
-        mean_prev = np.mean(result_c[:g.t0], axis=0)
-        cov_prev = s_d * np.cov(result_c[:g.t0].T)
-    else:
-        mean_prev = np.loadtxt(os.path.join(g.path['output'], 'mean'))
-        cov_prev = np.loadtxt(os.path.join(g.path['output'], 'covariance'))
+    # burn in period with constant variance
+    chain_kernel = chain_kernel_const
+    logging.debug(f"{chain_kernel.__name__}")
+    for i in range(start+1, min(g.t0, N)):
+        logging.debug(f'Step {i}')
+        result, other = mcmc_step(i)
+        logging.debug(f'len(other) = {len(other)}')
+        if g.save_chain_step:
+            g.save_chain_step(result, cov_prev, i, counter_sample, counter_dist, other)
+    # define mean and covariance from burn-in period
+    # TODO: don't need to do if start > t0
+    mean_prev = np.mean(result_c[:g.t0], axis=0)
+    cov_prev = s_d * np.cov(result_c[:g.t0].T)
 
     # start period with adaptation
     chain_kernel = chain_kernel_adaptive
-    for i in range(g.t0, N):
-        mcmc_step(i)
+    logging.debug(f"{chain_kernel.__name__}")
+    for i in range(max(g.t0, start+1), N):
+        logging.debug(f'Step {i}')
+        result, other = mcmc_step(i)
         if g.save_chain_step:
-            result = np.hstack((result_c[-1], result_sumstat[-1], result_dist[-1]))
-            g.save_chain_step(result, cov_prev, mean_prev, i, counter_sample, counter_dist, other)
+            g.save_chain_step(result, cov_prev, i, counter_sample, counter_dist, other)
         if i % int(N/100) == 0:
             logging.info("Accepted {} samples".format(i))
     #######################################################
@@ -306,13 +328,13 @@ def one_chain(chain_id):
     print('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
     logging.info('Number of model and distance evaluations: {} ({} accepted)'.format(counter_dist, N))
     logging.info('Number of sampling: {} ({} accepted)'.format(counter_sample, N))
-    n, r, size = utils.check_output_size(N, N_params, len([0]) - N_params - 1)
-    for i in range(n):
-        np.savez(os.path.join(g.path['output'], 'chain{}_{}.npz'.format(chain_id, i)), C=result_c[i*size:(i+1)*size],
-                 sumstat=result_sumstat[i*size:(i+1)*size], dist=result_dist[i*size:(i+1)*size])
-    if r:
-        np.savez(os.path.join(g.path['output'], 'chain{}_{}.npz'.format(chain_id, n)),
-                 C=result_c[n * size:], sumstat=result_sumstat[n * size:], dist=result_dist[n * size:])
+    # n, r, size = utils.check_output_size(N, N_params, len([0]) - N_params - 1)
+    # for i in range(n):
+    #     np.savez(os.path.join(g.path['output'], 'chain{}_{}.npz'.format(chain_id, i)), C=result_c[i*size:(i+1)*size],
+    #              sumstat=result_sumstat[i*size:(i+1)*size], dist=result_dist[i*size:(i+1)*size])
+    # if r:
+    #     np.savez(os.path.join(g.path['output'], 'chain{}_{}.npz'.format(chain_id, n)),
+    #              C=result_c[n * size:], sumstat=result_sumstat[n * size:], dist=result_dist[n * size:])
 
     return
 

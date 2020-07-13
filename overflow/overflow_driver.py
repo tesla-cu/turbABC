@@ -19,9 +19,9 @@ class Overflow(object):
             self.input_lines = file_template.readlines()
 
     def write_inputfile(self, c):
-        c[1] *= c[0]
-        c[2] *= c[0]
-        self.input_lines[7] = f'    OD_BETAST = {c[0]}, OD_BETA1 = {c[1]}, OD_BETA2 = {c[2]}, OD_SIGW1 = 0.5,\n'
+        beta1 = c[1] * c[0]
+        beta2 = c[2] * c[0]
+        self.input_lines[7] = f'    OD_BETAST = {c[0]}, OD_BETA1 = {beta1}, OD_BETA2 = {beta2}, OD_SIGW1 = 0.5,\n'
         self.input_lines[8] = f'    OD_A1 = {c[3]},\n'
         with open(os.path.join(self.job_folder, 'over.namelist'), 'w') as f:
             f.writelines(self.input_lines)
@@ -33,12 +33,12 @@ class Overflow(object):
             f.writelines(add_debug_line)
 
     def run_overflow(self):
-        exe = os.path.join(self.exe_path, 'a.out')
+        exe = os.path.join(self.exe_path, 'overflowmpi')
         outfile = os.path.join(self.job_folder, 'over.out')
         # Run overflow
         time_start = time()
         args = ['mpiexec', '-np', str(self.MPI_NP), '-d', self.job_folder, exe]
-        logging.info(args)
+        # logging.info(args)
         with open(outfile, 'wb', 8) as f:
             sp.Popen(args, cwd=self.job_folder, env=self.env, stdout=f, stderr=f).wait()
         time_end = time()
