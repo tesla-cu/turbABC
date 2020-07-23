@@ -26,10 +26,10 @@ env.bak/
 venv.bak/
 
 
-output/
-plots/
-plots_1d_black/
-tmp/
-archive/
-*.zip
-overflow_results/
+/output/
+/plots/
+/plots_1d_black/
+/tmp/
+/archive/
+/*.zip
+/overflow_results/
