@@ -34,7 +34,7 @@ data_file = 'joined_data.npz'
 
 x = 0.03
 lim = 0.25
-N_chains = 200
+N_chains = 250
 num_bin_kde = 15
 num_bin_raw = [12]*4
 mirror = True

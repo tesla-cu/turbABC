@@ -11,15 +11,15 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
     N_total, N_params = result.shape
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
-    plot_dist_pdf(output_folder, dist, 0.0134)
+    # plot_dist_pdf(output_folder, dist, 0.0134)
 
     # C_limits_fftkde = np.array((np.min(result, axis=0), np.max(result, axis=0))).T
     ind = np.argsort(dist)
-    accepted = result[ind]
+    accepted_all = result[ind]
     logging.info('##################################################')
     logging.info(f'There are {len(ind)} samples in {N_params}D space')
     dist = dist[ind]
-    logging.info('min dist = {} at {}'.format(dist[0], accepted[0]))
+    logging.info('min dist = {} at {}'.format(dist[0], accepted_all[0]))
     for x in x_list:
         n = int(x * N_total)
         folder = os.path.join(output_folder, f'x_{x * 100}')
@@ -27,7 +27,8 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
             os.makedirs(folder)
         logging.info('\n')
         logging.info(f'x_{x * 100}: {n} samples accepted')
-        accepted = accepted[:n, :N_params]
+        accepted = accepted_all[:n]
+        np.savez(os.path.join(folder, 'data.npz'), c_array=accepted, N=n)
         eps = dist[n-1]
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, n, N_total))
@@ -50,11 +51,12 @@ def marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder, mirror=False)
     if not os.path.isdir(folder):
         os.makedirs(folder)
     ##############################################################################
-    logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
-    H, C_final_joint = pp.calc_raw_joint_pdf(accepted, num_bin_raw, C_limits)
-    np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
-    pp.calc_marginal_pdf_raw(accepted, num_bin_raw, C_limits, folder)
-    del H
+    if num_bin_raw:
+        logging.info('2D raw marginals with {} bins per dimension'.format(num_bin_raw))
+        H, C_final_joint = pp.calc_raw_joint_pdf(accepted, num_bin_raw, C_limits)
+        np.savetxt(os.path.join(folder, 'C_final_joint{}'.format(num_bin_raw)), C_final_joint)
+        pp.calc_marginal_pdf_raw(accepted, num_bin_raw, C_limits, folder)
+        del H
     # ##############################################################################
     logging.info('2D smooth marginals with {} bins per dimension'.format(num_bin_kde))
     if mirror:

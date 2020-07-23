@@ -96,18 +96,22 @@ def restart_chain(result_file, N_params, t0, c_init):
     if os.path.exists(result_file):
         with open(result_file) as f:
             lines = f.readlines()
-            done = len(lines) - 1
-            if done < t0:
-                g.c_array = np.empty((done + 1, N_params))
-                for i, line in enumerate(lines):
-                    c = np.fromstring(line[1:-1], dtype=float, sep=',')[:N_params]
-                    g.c_array[i] = c
-            last_result = np.fromstring(lines[-1][1:-1], dtype=float, sep=',')
-            last_c = last_result[:N_params]
+        done = len(lines) - 1
+        g.c_array = np.empty((done + 1, N_params))
+        for i, line in enumerate(lines):
+            c = np.fromstring(line[1:-1], dtype=float, sep=',')[:N_params]
+            g.c_array[i] = c
+        last_result = np.fromstring(lines[-1][1:-1], dtype=float, sep=',')
+        last_c = last_result[:N_params]
         logging.info(f'Restart from step {done} with c = {last_c}')
         c_init = last_c
-        with open(os.path.join(g.path['output'], 'covariance')) as f:
-            lines = f.readlines()
-            g.std = np.fromstring(lines[-1][1:-1], dtype=float, sep=' ')
+        if done >= t0:
+            with open(os.path.join(g.path['output'], 'covariance')) as f:
+                lines = f.readlines()
+            cov = []
+            for line in lines[-N_params:]:
+                 cov.append(np.fromstring(line[1:-1], dtype=float, sep=' '))
+            g.std = np.array(cov)
+
     g.restart_chain = done
     np.savetxt(os.path.join(g.path['output'], f'C_start_{done}'), c_init)

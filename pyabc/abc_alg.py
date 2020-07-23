@@ -201,25 +201,22 @@ def one_chain(chain_id):
         mean_prev = np.loadtxt(os.path.join(g.path['output'], f'C_start_{g.restart_chain}')).reshape((-1, N_params))[chain_id]
         cov_prev = g.std
         start, counter_sample, counter_dist = np.loadtxt(os.path.join(g.path['output'], 'counter'), dtype=np.int32)[-1]
-        if g.restart_chain < g.t0:
-            result_c[:start+1] = g.c_array
-        else:
-            result_c[0] = C_init
+        result_c[:start+1] = g.c_array
     ####################################################################################################################
     def mcmc_step_nolimits(i):
         nonlocal mean_prev, cov_prev, counter_sample, counter_dist
         while True:
             counter_sample += 1
             c = chain_kernel(result_c[i - 1], s_d*cov_prev)
-            logging.debug(f'new sample {c}, {result_c[i - 1]}, {s_d * cov_prev}')
-            result, *other = g.work_function(c)
+            result, other = g.work_function(c)
             logging.info(f'dist = {result[-1]}, eps = {g.eps}')
             counter_dist += 1
             if result[-1] <= g.eps:  # distance < epsilon
                 result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
                 break
             else:
-                g.save_failed_step(result, i, counter_sample, counter_dist)
+                g.save_failed_step(result, i-1, counter_sample, counter_dist)
+        logging.debug(f"accepted {result_c[i]}")
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
         return result, other
@@ -244,7 +241,6 @@ def one_chain(chain_id):
         logging.debug(f"accepted {result_c[i]}")
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        logging.debug(f'len(other) = {len(other)}')
         return result, other
 
     ####################################################################################################################
@@ -298,20 +294,20 @@ def one_chain(chain_id):
         mcmc_step = mcmc_step
     else:
         mcmc_step = mcmc_step_nolimits
-
+    logging.debug(f"{mcmc_step.__name__}")
     # burn in period with constant variance
-    chain_kernel = chain_kernel_const
-    logging.debug(f"{chain_kernel.__name__}")
-    for i in range(start+1, min(g.t0, N)):
-        logging.debug(f'Step {i}')
-        result, other = mcmc_step(i)
-        logging.debug(f'len(other) = {len(other)}')
-        if g.save_chain_step:
-            g.save_chain_step(result, cov_prev, i, counter_sample, counter_dist, other)
-    # define mean and covariance from burn-in period
-    # TODO: don't need to do if start > t0
-    mean_prev = np.mean(result_c[:g.t0], axis=0)
-    cov_prev = s_d * np.cov(result_c[:g.t0].T)
+    if start < g.t0:
+        chain_kernel = chain_kernel_const
+        logging.debug(f"{chain_kernel.__name__}")
+        for i in range(start+1, min(g.t0, N)):
+            logging.debug(f'Step {i}')
+            result, other = mcmc_step(i)
+            logging.debug(f'len(other) = {len(other)}')
+            if g.save_chain_step:
+                g.save_chain_step(result, cov_prev, i, counter_sample, counter_dist, other)
+        # define mean and covariance from burn-in period
+        mean_prev = np.mean(result_c[:g.t0], axis=0)
+        cov_prev = s_d * np.cov(result_c[:g.t0].T)
 
     # start period with adaptation
     chain_kernel = chain_kernel_adaptive
