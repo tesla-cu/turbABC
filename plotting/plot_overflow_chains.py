@@ -12,13 +12,13 @@ import plotting_change_with_eps
 def main():
     basefolder = '../overflow_results/'
 
-    path = {'output': os.path.join(basefolder, 'chains_limits'), 'plots': os.path.join(basefolder, 'plots')}
+    path = {'output': os.path.join(basefolder, 'chains_limits_3'), 'plots': os.path.join(basefolder, 'plots')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     nominal_values = [0.09, 0.075/0.09, 0.0828/0.09, 0.31]
-    params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2\beta^*$', r'$a_1$']
-    num_bin_kde = 100
+    params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
+    num_bin_kde = 50
     folder = os.path.join(path['output'], 'postprocess/')
     plot_folder = path['plots']
     print("Plot comparison with true data and kde 2D marginals")

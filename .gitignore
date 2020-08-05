@@ -42,7 +42,7 @@ les_closure/valid_data/LES.npz
 les_closure/valid_data/README-isotropic.pdf
 les_closure/valid_data/sum_stat_true.npz
 overflow/plot_maps.py
-overflow/plot_sweep.py
-overflow/plot_x_distribution.py
+overflow/plotting/plot_sweep.py
+overflow/plotting/plot_x_distribution.py
 pyabc/test.py
 rans_ode/plots/

@@ -12,7 +12,7 @@ from matplotlib.lines import Line2D
 import matplotlib.colors as colors
 from rans_ode.sumstat import TruthData
 
-plt.style.use('dark_background')
+# plt.style.use('dark_background')
 
 mpl.rcParams['font.size'] = 10
 mpl.rcParams['axes.titlesize'] = plt.rcParams['font.size']
@@ -119,12 +119,6 @@ def plot_marginal_change_with_regression(data_folders, folder_reg, params_names,
 
     fig.savefig(os.path.join(plot_folder, 'marginal_change_with_regression'))
     plt.close('all')
-
-
-
-
-
-
 
 
 def plot_dist_pdf(path, dist, x):

@@ -6,20 +6,18 @@ import shutil
 import numpy as np
 import plotting_2Dmarginals
 import plotting_change_with_eps
-import plotting
-# import plot_compare_truth
+import rans_ode.plotting.plot_compare_truth_ransode as plot_compare_truth
 
 
 def main():
-    basefolder = '../overflow_results/'
+    basefolder = '../'
     nominal_values = None
-    ### 4 params
+    # ## 5 params
     # nominal_values = [0.09, 0.5, 0.075, 0.0828, 0.31]
-    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$']
+    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$', r'$a_1$']
     # params_names = [r'$c_1$', r'$c_2$', r'$c_3$', r'$c_4$']
-    # params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
-    # num_bin_kde = 20
-    # num_bin_raw = 10
+    # num_bin_kde = 15
+    # num_bin_raw = [6]*4
 
     ## 5 params
     # # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$', r'$a_1$']
@@ -28,13 +26,19 @@ def main():
     # num_bin_kde = 15
     # num_bin_raw = (6, 7+6, 6, 7, 8)
 
-    # # 4 params slice
-    nominal_values = [0.09, 0.075/0.09, 0.0828/0.09, 0.31]
-    params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
-    num_bin_kde = 15
-    num_bin_raw = [12]*4
+    # # # 4 params slice
+    # nominal_values = [0.09, 0.075/0.09, 0.0828/0.09, 0.31]
+    # params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
+    # num_bin_kde = 15
+    # num_bin_raw = [12]*4
 
-    path = {'output': os.path.join(basefolder, 'output_4/'), 'plots': os.path.join(basefolder, 'plots')}
+    ### rans_ode
+    nominal_values = [1.4, 0.71, 1.854, 1.912]
+    params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
+    num_bin_kde = 20
+    num_bin_raw = [10]*4
+
+    path = {'output': os.path.join(basefolder, 'rans_output/'), 'plots': os.path.join(basefolder, 'rans_plots')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
@@ -55,10 +59,10 @@ def main():
             print('plot folder: ', plot_folder_x)
             c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
             print('c = ', c)
-            # plot_compare_truth.plot_impulsive(c, plot_folder)
-            # plot_compare_truth.plot_periodic(c, plot_folder)
-            # plot_compare_truth.plot_decay(c, plot_folder)
-            # plot_compare_truth.plot_strained(c, plot_folder)
+            plot_compare_truth.plot_impulsive(c, plot_folder_x)
+            plot_compare_truth.plot_periodic(c, plot_folder_x)
+            plot_compare_truth.plot_decay(c, plot_folder_x)
+            plot_compare_truth.plot_strained(c, plot_folder_x)
             plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_raw, params_names, plot_folder_x)
             plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_kde, params_names,
                                                    plot_folder_x, smooth="smooth")
@@ -76,36 +80,40 @@ def main():
         ###################################################################################################################
 
 
-        # num_bin_kde_reg = 100
-        # regression_type = ['regression_dist', 'regression_full']
-        # for type in regression_type:
-        #     path[type] = os.path.join(path['output'], type)
-        #     plot_folder_base = os.path.join(path['plots'], type)
-        #     if not os.path.isdir(plot_folder_base):
-        #         os.makedirs(plot_folder_base)
-        #     folders_reg = glob.glob1(path[type], "x_*")
-        #     print(folders_reg)
-        #     folders = [os.path.join(path[type], i) for i in folders_reg]
-        #     for f, folder in enumerate(folders):
-        #         print(folder)
-        #         plot_folder = os.path.join(plot_folder_base, folders_reg[f])
-        #         if not os.path.isdir(plot_folder):
-        #             os.makedirs(plot_folder)
-        #         limits = np.loadtxt(os.path.join(folder, 'reg_limits'))
-        #         print('Plotting regression marginal pdf')
-        #         plotting.plot_marginal_smooth_pdf(folder, limits, num_bin_kde_reg, params_names, plot_folder)
-        #         print("Plot comparison with true data and kde 2D marginals")
-        #         c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde_reg)))
-        #         print("C_MAP = ", c)
-        #         # plot_compare_truth.plot_impulsive(c, plot_folder)
-        #         # plot_compare_truth.plot_periodic(c, plot_folder)
-        #         # plot_compare_truth.plot_decay(c, plot_folder)
-        #         # plot_compare_truth.plot_strained(c, plot_folder)
-        #     ###################################################################################################################
-        #     print("Plot change of marginal pdfs for different epsilon")
-        #     plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, plot_folder_base)
-        #     # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, plot_folder_base)
-        #     ###################################################################################################################
+        num_bin_kde_reg = 20
+        regression_type = ['regression_dist']
+        for type in regression_type:
+            path[type] = os.path.join(path['output'], type)
+            plot_folder_base = os.path.join(path['plots'], type)
+            if not os.path.isdir(plot_folder_base):
+                os.makedirs(plot_folder_base)
+            folders_reg = glob.glob1(path[type], "x_*")
+            print(folders_reg)
+            folders = [os.path.join(path[type], i) for i in folders_reg]
+            for f, folder in enumerate(folders):
+                print(folder)
+                plot_folder = os.path.join(plot_folder_base, folders_reg[f])
+                if not os.path.isdir(plot_folder):
+                    os.makedirs(plot_folder)
+                limits = np.loadtxt(os.path.join(folder, 'reg_limits'))
+                print('Plotting regression marginal pdf')
+                # plotting.plot_marginal_smooth_pdf(folder, limits, num_bin_kde_reg, params_names, plot_folder)
+                plotting_2Dmarginals.plot_marginal_pdf(folder, limits, limits, num_bin_kde_reg, params_names,
+                                                       plot_folder, smooth="smooth")
+                print("Plot comparison with true data and kde 2D marginals")
+                c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde_reg)))
+                print("C_MAP = ", c)
+                plot_compare_truth.plot_impulsive(c, plot_folder)
+                plot_compare_truth.plot_periodic(c, plot_folder)
+                plot_compare_truth.plot_decay(c, plot_folder)
+                plot_compare_truth.plot_strained(c, plot_folder)
+            ###################################################################################################################
+            print("Plot change of marginal pdfs for different epsilon")
+            # plotting.plot_marginal_change(folders, params_names, C_limits, num_bin_kde, plot_folder_base)
+            plotting_change_with_eps.plot_marginal_change(folders, params_names, limits, num_bin_kde_reg,
+                                                          plot_folder, nominal_values, smooth='smooth')
+            # plotting.plot_MAP_confidence_change(folders, params_names, num_bin_kde, C_limits, plot_folder_base)
+            ###################################################################################################################
 
 if __name__ == '__main__':
     main()
