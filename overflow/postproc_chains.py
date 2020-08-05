@@ -17,7 +17,7 @@ def main():
 
     basefolder = '../'
     ### Paths
-    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
+    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits_3/'),
             'valid_data': '../overflow/valid_data/'}
     postproc_folder = os.path.join(path['output'], 'postprocess')
     if not os.path.isdir(postproc_folder):

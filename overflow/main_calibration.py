@@ -63,7 +63,7 @@ def main():
         handlers=[logging.FileHandler("{0}/{1}.log".format(logPath, 'calibration')), logging.StreamHandler()],
         level=logging.DEBUG)
     ################################################################################
-    c_array = np.loadtxt(os.path.join(job_folder, 'c_array_{}'.format(n_job)))
+    c_array = np.loadtxt(os.path.join(job_folder, f'c_array_{n_job}'))
     result_file = os.path.join(job_folder, 'result.dat')
     logging.info(result_file)
     logging.info(os.path.exists(result_file))

@@ -53,12 +53,32 @@ def main():
     # Define parameters
     #####################################
     basefolder = '../'
-    path = {'output': os.path.join(basefolder, 'overflow_results/output_4/'),
+    ######### 4 params bb
+    # path = {'output': os.path.join(basefolder, 'overflow_results/output_4/'),
+    #         'valid_data': '../overflow/valid_data/'}
+    # N_jobs = [120, 200]
+    # raw_folders = ['output_4_part1', 'output_4_part2']
+    # N_params = 4  # number of non-constant parameters
+    # take_slice = False   # takes 4D slice at sigma = 0.55
+    # b_bstar = True
+    ######### 5 params
+    # path = {'output': os.path.join(basefolder, 'overflow_results/output_5/'),
+    #         'valid_data': '../overflow/valid_data/'}
+    # N_jobs = [45]
+    #
+    # raw_folders = ['output_5']
+    # N_params = 5  # number of non-constant parameters
+    # take_slice = False  # takes 4D slice at sigma = 0.55
+    # b_bstar = False
+    ##################################
+    ######### 5 params bb
+    path = {'output': os.path.join(basefolder, 'overflow_results/output_5_bb/'),
             'valid_data': '../overflow/valid_data/'}
-    N_jobs = [120, 200]
-    raw_folders = ['output_4_part1', 'output_4_part2']
-    N_params = 4  # number of non-constant parameters
-    take_slice = False   # takes 4D slice at sigma = 0.55
+    N_jobs = [45, 60]
+
+    raw_folders = ['output_5_bb/output5_part1', 'output_5_bb/output5_part2']
+    N_params = 5  # number of non-constant parameters
+    take_slice = False  # takes 4D slice at sigma = 0.55
     b_bstar = True
     ##################################
     if not os.path.isdir(path['output']):
@@ -79,7 +99,7 @@ def main():
     dist = []
     for i, data_folder in enumerate(data_folders):
         folders = [os.path.join(data_folder, 'calibration_job{}'.format(n), ) for n in range(N_jobs[i])]
-        result = load_data(folders, sumstat_length, check_length=True)  # to check length need c_array_* files
+        result = load_data(folders, sumstat_length, check_length=False)  # to check length need c_array_* files
 
         if b_bstar:
             result[:, 2] /= result[:, 0]    # beta1/beta*

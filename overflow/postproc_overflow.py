@@ -18,7 +18,7 @@ def main():
 
     basefolder = '../'
     ### Paths
-    path = {'output': os.path.join(basefolder, 'overflow_results/output/'),
+    path = {'output': os.path.join(basefolder, 'overflow_results/output_4_bb/'),
             'valid_data': '../overflow/valid_data/'}
     print('Path:', path)
     logging.basicConfig(
@@ -31,8 +31,9 @@ def main():
     x_list = [0.3, 0.2, 0.1, 0.05, 0.03]
     num_bin_kde = 15
     # num_bin_raw = (6, 6+7, 6, 7, 8)
-    num_bin_raw = [6]*5
-    mirror = True
+    # num_bin_raw = [6]*5
+    num_bin_raw = [12]*4
+    mirror = False
 
     Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv', 'x_separation'])
     sumstat_true = Truth.sumstat_true

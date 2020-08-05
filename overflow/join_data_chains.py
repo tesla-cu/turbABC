@@ -46,11 +46,17 @@ def main():
     ######################################
     # Define parameters
     #####################################
-    basefolder = '../'
-    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
-            'valid_data': '../overflow/valid_data/'}
-    N_jobs = [200]
-    raw_folders = ['chains_limits']
+    # basefolder = '../'
+    # path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
+    #         'valid_data': '../overflow/valid_data/'}
+    # N_jobs = [200]
+    # raw_folders = ['chains_limits']
+    ##################################
+    # basefolder = '../'
+    # path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
+    #         'valid_data': '../overflow/valid_data/'}
+    # N_jobs = [200]
+    # raw_folders = ['chains_limits']
     ##################################
     if not os.path.isdir(path['output']):
         os.makedirs(path['output'])
