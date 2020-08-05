@@ -79,8 +79,7 @@ def sampling_uniform_grid(N_each, C_limits):
 
 
 def pdf_from_array_with_x(array, bins, range):
-    pdf, edges = np.histogram(array, bins=bins, range=range)
-    pdf = pdf/np.sum(pdf)
+    pdf, edges = np.histogram(array, bins=bins, range=range, density=1)
     x = (edges[1:] + edges[:-1]) / 2
     return x, pdf
 

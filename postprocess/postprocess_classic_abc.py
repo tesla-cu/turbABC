@@ -14,7 +14,7 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
     # plot_dist_pdf(output_folder, dist, 0.0134)
 
     # C_limits_fftkde = np.array((np.min(result, axis=0), np.max(result, axis=0))).T
-    ind = np.argsort(dist)
+    ind = np.argsort(dist[:, 0])
     accepted_all = result[ind]
     logging.info('##################################################')
     logging.info(f'There are {len(ind)} samples in {N_params}D space')
@@ -33,6 +33,7 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
         np.savetxt(os.path.join(folder, 'eps'), [eps])
         logging.info('x = {}, eps = {}, N accepted = {} (total {})'.format(x, eps, n, N_total))
         # marginal(accepted, C_limits_fftkde, num_bin_kde, num_bin_raw, folder)
+        logging.info(f"Mirroring is {mirror}")
         marginal(accepted, C_limits, num_bin_kde, num_bin_raw, folder, mirror)
     del accepted, dist
     collect_MAP_values(output_folder, x_list, num_bin_kde)

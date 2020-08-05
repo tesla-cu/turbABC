@@ -34,13 +34,18 @@ def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits, weights=None):
 
 
 def calc_marginal_pdf_raw(accepted, num_bin_joint, C_limits, path, weights=None):
-    # TODO: add check for num_bin_joint being int or tuple
     N_params = len(C_limits)
+    if not hasattr(num_bin_joint, "__len__"):
+        num_bin_joint = [num_bin_joint]*N_params
+
     for i in range(N_params):
         for j in range(N_params):
             if i == j:
                 x, y = pdf_from_array_with_x(accepted[:, i], bins=num_bin_joint[i], range=C_limits[i])
                 np.savetxt(os.path.join(path, 'marginal_{}'.format(i)), [x, y])
+                # # 1d kde
+                # Z = gaussian_kde_scipy(accepted[:, i], C_limits[0], C_limits[1], 10*num_bin_joint[i])
+
             elif i < j:
                 # note: the histogram does not follow the Cartesian convention x values are on the abscissa and y values
                 # on the ordinate axis. Rather, x is histogrammed along the first dimension of the array (vertical),
@@ -78,7 +83,7 @@ def calc_marginal_pdf_smooth(Z, num_bin_joint, C_limits, data_folder):
                 ind = tuple(np.where(np.arange(N_params) != i)[0])
                 y = np.sum(Z, axis=ind)
                 x = np.linspace(C_limits[i, 0], C_limits[i, 1], num_bin_joint + 1)
-                y = y/np.sum(y)
+                y = y/np.sum(y)/np.diff(x)[0]
                 np.savetxt(os.path.join(data_folder, 'marginal_smooth{}'.format(i)), [x, y])
             elif i < j:
                 # Smooth

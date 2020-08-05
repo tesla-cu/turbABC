@@ -33,3 +33,16 @@ venv.bak/
 /archive/
 /*.zip
 /overflow_results/
+les_closure/tmp_test_filtering.py
+les_closure/valid_data/.npz
+les_closure/valid_data/HIT_u.bin
+les_closure/valid_data/HIT_v.bin
+les_closure/valid_data/HIT_w.bin
+les_closure/valid_data/LES.npz
+les_closure/valid_data/README-isotropic.pdf
+les_closure/valid_data/sum_stat_true.npz
+overflow/plot_maps.py
+overflow/plot_sweep.py
+overflow/plot_x_distribution.py
+pyabc/test.py
+rans_ode/plots/

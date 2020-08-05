@@ -7,9 +7,9 @@ sys.path.append('/Users/olgadorr/Research/ABC_MCMC')
 import pyabc.parallel as parallel
 import pyabc.abc_alg as abc_alg
 import pyabc.glob_var as g
-import postprocess.postproc_abc as postproc_abc
+# import postprocess.postproc_abc as postproc_abc
 import sumstat
-from workfunc_rans import StrainTensor
+from workfunc_rans import StrainTensor, define_work_function
 
 
 def main():
@@ -41,6 +41,7 @@ def main():
     g.Truth = sumstat.TruthData(valid_folder=g.path['valid_data'], case=input['case'])
     g.Strain = StrainTensor(valid_folder=g.path['valid_data'])
     g.case = input['case']
+    g.work_function = define_work_function()
     C_limits = np.array(input['C_limits'])
     C_nominal = input['C_nominal']
     ####################################################################################
@@ -52,6 +53,7 @@ def main():
     if input['abc_algorithm'] == 'abc':    # classical abc algorithm (accepts all samples for further postprocessing)
         logging.info("Classic ABC algorithm")
         C_array = abc_alg.sampling(algorithm_input['sampling'], C_limits, algorithm_input['N'])
+        # if estimating of fewer parameters
         if len(C_limits) < len(C_nominal):
             logging.info('Using nominal values: {}'.format(C_nominal))
             add = [C_nominal[len(C_limits):], ]*(algorithm_input['N']**len(C_limits))

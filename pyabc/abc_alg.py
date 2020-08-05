@@ -25,6 +25,7 @@ def abc_classic(C_array):
     N_params = len(C_array[0])
     N = len(C_array)
     logging.info(f'Classic ABC algorithm: Number of parameters: {N_params}, Number of samples: {N}')
+    logging.info(f'Working function: {g.work_function.__name__}')
     start = time()
     g.par_process.run(func=g.work_function, tasks=C_array)
     result = g.par_process.get_results()
