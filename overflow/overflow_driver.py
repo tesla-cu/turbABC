@@ -43,7 +43,9 @@ class Overflow(object):
             sp.Popen(args, cwd=self.job_folder, env=self.env, stdout=f, stderr=f).wait()
         time_end = time()
         timer(time_start, time_end, 'Overflow time')
-        return
+        if time_end-time_start < 100:
+            return False
+        return True
 
     @staticmethod
     def read_data_from_file(filepath):

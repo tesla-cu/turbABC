@@ -1,18 +1,13 @@
 import os
-import glob
 
-# import matplotlib as mpl
-# mpl.use('pdf')
 import numpy as np
-import plotting
-import plotting_2Dmarginals
-import plotting_change_with_eps
+import plotting.plotting_2Dmarginals as plotting_2Dmarginals
 
 
 def main():
-    basefolder = '../overflow_results/'
+    basefolder = '../../overflow_results/'
 
-    path = {'output': os.path.join(basefolder, 'chains_limits_3'), 'plots': os.path.join(basefolder, 'plots')}
+    path = {'output': os.path.join(basefolder, 'chains_limits_final'), 'plots': os.path.join(basefolder, 'plots_limits')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))

@@ -37,23 +37,26 @@ def work_function_chain(c):
     logging.debug(f'Chain step: {c}')
     overflow = g.overflow
     overflow.write_inputfile(c)
-    overflow.run_overflow()    # run overflow
-    os.rename(os.path.join(g.job_folder, 'q.save'), os.path.join(g.job_folder, 'q.restart'))  # rename
-    overflow.write_debug()
-    overflow.run_overflow()    # run debug to get q.turb file
-    output_tuple = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
-    cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice, u_surface, x_shock = output_tuple
-    sum_stat_cp = calc_sum_stat(g.Grid.grid_x[::-1], cp[::-1], g.Truth.cp[:, 0])
-    sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv, x_shock))
-    dist_x = calc_err(sum_stat[-2:], g.Truth.sumstat_true[-2:])
-    logging.debug(f'separation error = {dist_x}')
-    if dist_x < 0.25:
-        err = calc_err(sum_stat[:-2]/g.Truth.norm[:-2], g.Truth.sumstat_true[:-2])
+    success = overflow.run_overflow()    # run overflow
+    if success:
+        os.rename(os.path.join(g.job_folder, 'q.save'), os.path.join(g.job_folder, 'q.restart'))  # rename
+        overflow.write_debug()
+        overflow.run_overflow()    # run debug to get q.turb file
+        output_tuple = overflow.read_data_from_overflow(g.job_folder, g.Grid.grid, g.Grid.x_slices, g.Grid.y_slices)
+        cp, sum_stat_u, sum_stat_uv, u_slice, uv_slice, u_surface, x_shock = output_tuple
+        sum_stat_cp = calc_sum_stat(g.Grid.grid_x[::-1], cp[::-1], g.Truth.cp[:, 0])
+        sum_stat = np.hstack((sum_stat_cp, sum_stat_u, sum_stat_uv, x_shock))
+        dist_x = calc_err(sum_stat[-2:], g.Truth.sumstat_true[-2:])
+        logging.debug(f'separation error = {dist_x}')
+        if dist_x < 0.25:
+            err = calc_err(sum_stat[:-2]/g.Truth.norm[:-2], g.Truth.sumstat_true[:-2])
+        else:
+            err = 1e8
+        result = np.hstack((c, sum_stat, err)).tolist()
+        other = (cp, u_slice, uv_slice, u_surface, x_shock)
     else:
-        err = 1e8
-    result = np.hstack((c, sum_stat, err)).tolist()
-    other = (cp, u_slice, uv_slice, u_surface, x_shock)
-
+        result = np.hstack((c, np.zeros(g.Truth.sumstat_true), 10e8)).tolist()
+        other = None
     return result, other
 
 

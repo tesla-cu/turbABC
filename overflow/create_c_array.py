@@ -5,11 +5,11 @@ import sys
 import itertools
 
 basefolder = '../overflow_results/output4/'
-N_params = 4
-ind_param_nominal = 1
-N_per_dim = 10
+N_params = 5
+ind_param_nominal = 10
+N_per_dim = 6
 # N_per_dim = [6, 7, 6, 7, 8]
-N_jobs = 200
+N_jobs = 45
 
 C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
@@ -20,24 +20,24 @@ C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, be
 #             [0.05, 1.6],       # beta2
 #             [0.27, 0.36]]       # a1
 b_bstar = True
-# C_limits = [[0.07, 0.18],   # beta_st
-#             [0.08333333333333325, 1.48333333],         # sigma_w1
-#             [0.14, 1.27],       # beta1/beta*
-#             [-3.5183333333333326, 23],       # beta2/beta*
+C_limits = [[0.07, 0.18],   # beta_st
+            [0.1, 2],         # sigma_w1
+            [0.2, 3],       # beta1/beta*
+            [-1, 13],       # beta2/beta*
+            [0.24, 0.4]]       # a1
+
+# C_limits = [[0.07, 0.2],   # beta_st
+#             [0.14, 1.5],       # beta1/beta*
+#             [-0.85, 20],       # beta2/beta*
 #             [0.24, 0.36]]       # a1
 
-C_limits = [[0.07, 0.2],   # beta_st
-            [0.14, 1.5],       # beta1/beta*
-            [-0.85, 20],       # beta2/beta*
-            [0.24, 0.36]]       # a1
-
 # if need to add points in the end of file
-add = 1
-N_per_dim2 = [12, 12, 12, 12]
-C_limits2 = [[0.0505, 0.2],   # beta_st
-             [0.14, 1.704],       # beta1/beta*
-             [-0.85, 23.1275],       # beta2/beta*
-             [0.222, 0.36]]       # a1
+add = 0
+# N_per_dim2 = [12, 12, 12, 12]
+# C_limits2 = [[0.0505, 0.2],   # beta_st
+#              [0.14, 1.704],       # beta1/beta*
+#              [-0.85, 23.1275],       # beta2/beta*
+#              [0.222, 0.36]]       # a1
 
 
 def sampling_uniform_grid(N_each, C_limits):

@@ -15,10 +15,10 @@ def dist_by_sumstat(sumstat, sumstat_true):
 
 def main():
 
-    basefolder = '../'
+    basefolder = '../../'
     ### Paths
-    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits_3/'),
-            'valid_data': '../overflow/valid_data/'}
+    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits_final/'),
+            'valid_data': '../../overflow/valid_data/'}
     postproc_folder = os.path.join(path['output'], 'postprocess')
     if not os.path.isdir(postproc_folder):
         os.makedirs(postproc_folder)

@@ -21,6 +21,16 @@ def load_data(folders, len_sumstat):
     return result
 
 
+def join_profiles(folders, cp, u, uv, u_surf):
+    for i, folder in enumerate(folders):
+        print('job {}'.format(i))
+        cp = np.vstack((cp, np.fromfile(os.path.join(folder, 'cp_all.bin')).reshape(-1, 721)))
+        u  = np.vstack((u, np.fromfile(os.path.join(folder, 'u_slice.bin')).reshape(-1, 800)))
+        uv = np.vstack((uv, np.fromfile(os.path.join(folder, 'uv_slice.bin')).reshape(-1, 800)))
+        u_surf = np.vstack((u_surf, np.fromfile(os.path.join(folder, 'u_surface.bin')).reshape(-1, 721)))
+    return cp, u, uv, u_surf
+
+
 def define_limits_for_uniform(c_array):
     N_params = c_array.shape[1]
     C_limits = np.empty((N_params, 2))
@@ -52,11 +62,12 @@ def main():
     # N_jobs = [200]
     # raw_folders = ['chains_limits']
     ##################################
-    # basefolder = '../'
-    # path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
-    #         'valid_data': '../overflow/valid_data/'}
-    # N_jobs = [200]
-    # raw_folders = ['chains_limits']
+    basefolder = '../'
+    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
+            'valid_data': '../overflow/valid_data/'}
+    N_jobs = 200
+    data_folder = 'chains_limits'
+    folders = [os.path.join(data_folder, 'chain_{}'.format(n), ) for n in range(N_jobs)]
     ##################################
     if not os.path.isdir(path['output']):
         os.makedirs(path['output'])
@@ -64,24 +75,19 @@ def main():
         format="%(levelname)s: %(name)s:  %(message)s",
         handlers=[logging.FileHandler(os.path.join(path['output'], 'ABC_postprocess.log')), logging.StreamHandler()],
         level=logging.DEBUG)
-    data_folders = [os.path.join(basefolder, 'overflow_results', folder) for folder in raw_folders]
-    print('data folders to join:', data_folders)
+    print('data folders to join:', data_folder)
     # We need truth statistics only to know length when loading data
     Truth = TruthData(path['valid_data'], ['cp', 'u', 'uv', 'x_separation'])
     sumstat_length = len(Truth.sumstat_true)
-
-    logging.info('Loading data')
+    ####################################################################################################
+    logging.info('Loading c_array data')
     c_array = np.empty((0, N_PARAMS))
     sumstat_all = np.empty((0, sumstat_length))
     dist = []
-    for i, data_folder in enumerate(data_folders):
-        folders = [os.path.join(data_folder, 'chain_{}'.format(n), ) for n in range(N_jobs[i])]
-        result = load_data(folders, sumstat_length)  # to check length need c_array_* files
-
-
-        c_array = np.vstack((c_array, result[:, :N_PARAMS]))
-        sumstat_all = np.vstack((sumstat_all, result[:, N_PARAMS:-1]))
-        dist.append(np.min(result[:, -1]))
+    result = load_data(folders, sumstat_length)  # to check length need c_array_* files
+    c_array = np.vstack((c_array, result[:, :N_PARAMS]))
+    sumstat_all = np.vstack((sumstat_all, result[:, N_PARAMS:-1]))
+    dist.append(np.min(result[:, -1]))
     print('min stores dist:', np.min(dist))
 
     N_total = len(c_array)
@@ -89,7 +95,27 @@ def main():
     C_limits = define_limits_for_uniform(c_array)
     np.savez(os.path.join(path['output'], 'joined_data.npz'),
              c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
+    ####################################################################################################
+    ####################################################################################################
+    logging.info('Loading profiles data')
 
+    cp_nominal = np.fromfile(os.path.join(path['nominal_data'], 'cp_all.bin'), dtype=float)
+    u_nominal = np.fromfile(os.path.join(path['nominal_data'], 'u_slice.bin'), dtype=float)
+    uv_nominal = np.fromfile(os.path.join(path['nominal_data'], 'uv_slice.bin'), dtype=float)
+    u_surf_nominal = np.fromfile(os.path.join(path['nominal_data'], 'u_surface.bin'), dtype=float)
+
+    logging.info('Loading data')
+    cp_profile = np.empty((0, len(cp_nominal)))
+    u_profile = np.empty((0, len(u_nominal)))
+    uv_profile = np.empty((0, len(uv_nominal)))
+    u_surf_profile = np.empty((0, len(u_surf_nominal)))
+
+    cp_profile, u_profile, uv_profile, u_surf_profile = join_profiles(folders, cp_profile,
+                                                                      u_profile, uv_profile, u_surf_profile)
+    N_total = len(c_array)
+    print(f'There are {N_total} samples in {N_PARAMS}D space')
+    np.savez(os.path.join(path['output'], 'joined_profiles.npz'),
+             cp=cp_profile, u=u_profile, uv=uv_profile, u_surface=u_surf_profile)
     ####################################################################################################
 
 

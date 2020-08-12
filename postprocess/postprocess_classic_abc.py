@@ -14,6 +14,7 @@ def output_by_percent(result, dist, C_limits, x_list, num_bin_raw, num_bin_kde, 
     # plot_dist_pdf(output_folder, dist, 0.0134)
 
     # C_limits_fftkde = np.array((np.min(result, axis=0), np.max(result, axis=0))).T
+    dist = dist.reshape(-1, 1)
     ind = np.argsort(dist[:, 0])
     accepted_all = result[ind]
     logging.info('##################################################')
