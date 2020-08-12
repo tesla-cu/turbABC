@@ -202,6 +202,8 @@ def one_chain(chain_id):
         mean_prev = np.loadtxt(os.path.join(g.path['output'], f'C_start_{g.restart_chain}')).reshape((-1, N_params))[chain_id]
         cov_prev = g.std
         start, counter_sample, counter_dist = np.loadtxt(os.path.join(g.path['output'], 'counter'), dtype=np.int32)[-1]
+        if len(g.c_array) != start:
+            start = start + 100
         result_c[:start+1] = g.c_array
     ####################################################################################################################
     def mcmc_step_nolimits(i):
@@ -273,7 +275,7 @@ def one_chain(chain_id):
                 c = chain_kernel(result_c[i - 1], s_d * cov_prev)
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
-            result, *other = g.work_function(c)
+            result, other = g.work_function(c)
             counter_dist += 1
             if result[-1] <= delta:  # distance < eps
                 result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
