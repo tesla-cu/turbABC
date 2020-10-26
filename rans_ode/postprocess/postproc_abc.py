@@ -15,12 +15,12 @@ def load_c(files, N_params):
     return accepted
 
 
-# def load_sum_stat(files):
-#     sum_stat = np.empty((0, len(np.load(files[0])['sumstat'][0])))
-#     for file in files:
-#         logging.debug('loading sum_stat from {}'.format(file))
-#         sum_stat = np.vstack((sum_stat, np.load(file)['sumstat']))
-#     return sum_stat
+def load_sumstat(files):
+    sum_stat = np.empty((0, len(np.load(files[0])['sumstat'][0])))
+    for file in files:
+        logging.debug('loading sum_stat from {}'.format(file))
+        sum_stat = np.vstack((sum_stat, np.load(file)['sumstat']))
+    return sum_stat
 
 
 def load_dist(files):
@@ -58,7 +58,7 @@ def main(args):
     ### Paths
     # path = input['path']
     # path = {'output': os.path.join('../runs_abc/', 'output/'), 'valid_data': '../rans_ode/valid_data/'}
-    path = {'output': os.path.join('../', 'rans_output/'), 'valid_data': '../rans_ode/valid_data/'}
+    path = {'output': os.path.join('../../', 'rans_output_nominal/'), 'valid_data': '../rans_ode/valid_data/'}
     # path = {'output': os.path.join('../les_closure/ABC/', 'output/'), 'valid_data': '../les_closure/valid_data/'}
 
     print(path)
@@ -68,9 +68,9 @@ def main(args):
         level=logging.DEBUG)
 
     logging.info('\n############# POSTPROCESSING ############')
-    x_list = [0.3, 0.1, 0.05, 0.03, 0.01]
-    num_bin_kde = 20
-    num_bin_raw = 10
+    x_list = [0.2, 0.1, 0.05, 0.03, 0.01, 0.005, 0.003, 0.001, 0.0005]
+    num_bin_kde = 100
+    num_bin_raw = 60
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     N_params = len(C_limits)
     files_abc = glob.glob1(path['output'], "classic_abc*.npz")
@@ -83,8 +83,8 @@ def main(args):
     #
     # # ################################################################################################################
     logging.info('\n############# Classic ABC ############')
-    output_folder = os.path.join(path['output'], 'postprocess_impulsive')
-    output_by_percent(accepted, dist, C_limits, x_list, num_bin_raw, num_bin_kde, output_folder, i_stat=0, mirror=False)
+    output_folder = os.path.join(path['output'], 'postprocess')
+    output_by_percent(accepted, dist, C_limits, x_list, num_bin_raw, num_bin_kde, output_folder, mirror=False)
 
 
 

@@ -4,45 +4,28 @@ import shutil
 # import matplotlib as mpl
 # mpl.use('pdf')
 import numpy as np
-import plotting_2Dmarginals
-import plotting_change_with_eps
-import rans_ode.plotting.plot_compare_truth_ransode as plot_compare_truth
+import plotting.plotting_2Dmarginals as plotting_2Dmarginals
+import plotting.plotting_change_with_eps as plotting_change_with_eps
+import plot_compare_truth_ransode as plot_compare_truth
 
 
 def main():
-    basefolder = '../'
-    nominal_values = None
-    ## 5 params
-    # nominal_values = [0.09, 0.5, 0.075, 0.0828, 0.31]
-    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1$', r'$\beta_2$', r'$a_1$']
-    # num_bin_kde = 15
-    # num_bin_raw = [6]*5
+    basefolder = '../../'
 
-    # ## 5 params
-    # nominal_values = [0.09, 0.5, 0.075/0.09, 0.0828/0.09, 0.31]
-    # params_names = [r'$\beta^*$', r'$\sigma_{w1}$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
-    # num_bin_kde = 15
-    # num_bin_raw = (6, 7+6, 6, 7, 8)
+    ### rans_ode
+    nominal_values = [1.5, 0.8, 1.44, 1.92]
+    params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
+    num_bin_kde = 100
+    num_bin_raw = [60]*4
 
-    # 4 params
-    nominal_values = [0.09, 0.075/0.09, 0.0828/0.09, 0.31]
-    params_names = [r'$\beta^*$', r'$\beta_1/\beta^*$', r'$\beta_2/\beta^*$', r'$a_1$']
-    num_bin_kde = 15
-    num_bin_raw = [12]*4
-
-    # ### rans_ode
-    # nominal_values = [1.4, 0.71, 1.854, 1.912]
-    # params_names = [r'$C_1$', r'$C_2$', r'$C_{\varepsilon 1}$', r'$C_{\varepsilon 2}$']
-    # num_bin_kde = 20
-    # num_bin_raw = [10]*4
-
-    path = {'output': os.path.join(basefolder, 'overflow_results/output_4_bb/'),
-            'plots': os.path.join(basefolder, 'overflow_results/plots_4_bb')}
+    path = {'output': os.path.join(basefolder, 'rans_output/'),
+            'plots': os.path.join(basefolder, 'rans_plots_exp/')}
     if not os.path.isdir(path['plots']):
         os.makedirs(path['plots'])
+    plot_compare_truth.plot_experiment(path['plots'])
     C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     limits = C_limits
-    stats = glob.glob1(path['output'], "postprocess_*")     # different statistics
+    stats = glob.glob1(path['output'], "postprocess*")     # different statistics
     postprocess_folders = [os.path.join(path['output'], folder) for folder in stats]
     for k, output_folder in enumerate(postprocess_folders):
         print('output: ', output_folder)
@@ -59,9 +42,11 @@ def main():
             c = np.loadtxt(os.path.join(folder, 'C_final_smooth{}'.format(num_bin_kde)))
             print('c = ', c)
             # plot_compare_truth.plot_impulsive(c, plot_folder_x)
-            # plot_compare_truth.plot_periodic(c, plot_folder_x)
+            plot_compare_truth.plot_periodic(c, plot_folder_x)
             # plot_compare_truth.plot_decay(c, plot_folder_x)
             # plot_compare_truth.plot_strained(c, plot_folder_x)
+            plot_compare_truth.plot_validation_exp(c, plot_folder_x)
+            plot_compare_truth.plot_validation_nominal(c, plot_folder_x)
             plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_raw, params_names, plot_folder_x)
             plotting_2Dmarginals.plot_marginal_pdf(folder, C_limits, C_limits, num_bin_kde, params_names,
                                                    plot_folder_x, smooth="smooth")

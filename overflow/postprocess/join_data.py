@@ -26,14 +26,25 @@ def load_data(folders, len_sumstat, check_length=False):
                                                                                N_total - len(result)))
     return result
 
+def join_profiles(folders, cp, u, uv, u_surf):
+    for i, folder in enumerate(folders):
+        print('job {}'.format(i))
+        cp = np.vstack((cp, np.fromfile(os.path.join(folder, 'cp_all.bin')).reshape(-1, 721)))
+        u  = np.vstack((u, np.fromfile(os.path.join(folder, 'u_slice.bin')).reshape(-1, 800)))
+        uv = np.vstack((uv, np.fromfile(os.path.join(folder, 'uv_slice.bin')).reshape(-1, 800)))
+        u_surf = np.vstack((u_surf, np.fromfile(os.path.join(folder, 'u_surface.bin')).reshape(-1, 721)))
+    return cp, u, uv, u_surf
+
 
 def define_limits_for_uniform(c_array):
     N_params = c_array.shape[1]
     C_limits = np.empty((N_params, 2))
     for i in range(N_params):
         unique = np.unique(c_array[:, i])
+        print(unique)
         dif = np.max(np.diff(unique))
         C_limits[i] = [unique[j] - (j+0.5)*dif for j in [0, -1]]
+    print(C_limits)
     return C_limits
 
 
@@ -52,7 +63,7 @@ def main():
     ######################################
     # Define parameters
     #####################################
-    basefolder = '../'
+    basefolder = '../../'
     ######### 4 params bb
     # path = {'output': os.path.join(basefolder, 'overflow_results/output_4/'),
     #         'valid_data': '../overflow/valid_data/'}
@@ -61,25 +72,39 @@ def main():
     # N_params = 4  # number of non-constant parameters
     # take_slice = False   # takes 4D slice at sigma = 0.55
     # b_bstar = True
-    ######### 5 params
-    # path = {'output': os.path.join(basefolder, 'overflow_results/output_5/'),
-    #         'valid_data': '../overflow/valid_data/'}
-    # N_jobs = [45]
-    #
-    # raw_folders = ['output_5']
-    # N_params = 5  # number of non-constant parameters
-    # take_slice = False  # takes 4D slice at sigma = 0.55
-    # b_bstar = False
-    ##################################
-    ######### 5 params bb
-    path = {'output': os.path.join(basefolder, 'overflow_results/output_5_bb/'),
-            'valid_data': '../overflow/valid_data/'}
-    N_jobs = [45, 60]
+    ######## 4 params
+    basefolder = '../../'
+    path = {'output': os.path.join(basefolder, 'overflow_results/output_4_bb/', ),
+            'valid_data': os.path.join(basefolder, 'overflow/valid_data/', ),
+            'nominal_data': os.path.join(basefolder, 'overflow_results/nominal_data', )}
+    N_jobs = [120, 200]
 
-    raw_folders = ['output_5_bb/output5_part1', 'output_5_bb/output5_part2']
-    N_params = 5  # number of non-constant parameters
+    raw_folders = ['output_4_bb/output_4_part1', 'output_4_bb/output_4_part2']
+    N_params = 4  # number of non-constant parameters
     take_slice = False  # takes 4D slice at sigma = 0.55
     b_bstar = True
+    ######## 5 params inflow
+    basefolder = '../../'
+    path = {'output': os.path.join(basefolder, 'overflow_results/output_inflow/', ),
+            'valid_data': os.path.join(basefolder, 'overflow/valid_data/', ),
+            'nominal_data': os.path.join(basefolder, 'overflow_results/nominal_data', )}
+    N_jobs = [45, 60]
+
+    raw_folders = ['output_inflow/output_inflow_part1', 'output_inflow/output_inflow_part2']
+    N_params = 5  # number of non-constant parameters
+    take_slice = False  # takes 4D slice at sigma = 0.55
+    b_bstar = False
+    ##################################
+    # ######### 5 params bb
+    # path = {'output': os.path.join(basefolder, 'overflow_results/output_5_bb/'),
+    #         'valid_data': os.path.join(basefolder,'overflow/valid_data/'),
+    #         'nominal_data': os.path.join(basefolder, 'overflow_results/nominal_data', )}
+    # N_jobs = [45, 60]
+    #
+    # raw_folders = ['output_5_bb/output5_part1', 'output_5_bb/output5_part2']
+    # N_params = 5  # number of non-constant parameters
+    # take_slice = False  # takes 4D slice at sigma = 0.55
+    # b_bstar = True
     ##################################
     if not os.path.isdir(path['output']):
         os.makedirs(path['output'])
@@ -97,28 +122,49 @@ def main():
     c_array = np.empty((0, N_params))
     sumstat_all = np.empty((0, sumstat_length))
     dist = []
+
+
+    # for i, data_folder in enumerate(data_folders):
+    #     folders = [os.path.join(data_folder, 'calibration_job{}'.format(n), ) for n in range(N_jobs[i])]
+    #     result = load_data(folders, sumstat_length, check_length=False)  # to check length need c_array_* files
+    #
+    #
+    #     if b_bstar:
+    #         result[:, 2] /= result[:, 0]    # beta1/beta*
+    #         result[:, 3] /= result[:, 0]    # beta2/beta*
+    #
+    #     if N_params == 4:
+    #         result = np.delete(result, 1, axis=1)
+    #
+    #     c_array = np.vstack((c_array, result[:, :N_params]))
+    #     sumstat_all = np.vstack((sumstat_all, result[:, N_params:-1]))
+    #     dist.append(np.min(result[:, -1]))
+    # print('min stores dist:', np.min(dist))
+    #
+    # N_total = len(c_array)
+    # print(f'There are {N_total} samples in {N_params}D space')
+    # C_limits = define_limits_for_uniform(c_array)
+    # np.savez(os.path.join(path['output'], 'joined_data.npz'),
+    #          c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
+
+    cp_nominal = np.fromfile(os.path.join(path['nominal_data'], 'cp_all.bin'), dtype=float)
+    u_nominal = np.fromfile(os.path.join(path['nominal_data'], 'u_slice.bin'), dtype=float)
+    uv_nominal = np.fromfile(os.path.join(path['nominal_data'], 'uv_slice.bin'), dtype=float)
+    u_surf_nominal = np.fromfile(os.path.join(path['nominal_data'], 'u_surface.bin'), dtype=float)
+
+    cp_profile = np.empty((0, len(cp_nominal)))
+    u_profile = np.empty((0, len(u_nominal)))
+    uv_profile = np.empty((0, len(uv_nominal)))
+    u_surf_profile = np.empty((0, len(u_surf_nominal)))
     for i, data_folder in enumerate(data_folders):
         folders = [os.path.join(data_folder, 'calibration_job{}'.format(n), ) for n in range(N_jobs[i])]
-        result = load_data(folders, sumstat_length, check_length=False)  # to check length need c_array_* files
+        cp_profile, u_profile, uv_profile, u_surf_profile = join_profiles(folders, cp_profile,
+                                                                      u_profile, uv_profile, u_surf_profile)
 
-        if b_bstar:
-            result[:, 2] /= result[:, 0]    # beta1/beta*
-            result[:, 3] /= result[:, 0]    # beta2/beta*
-
-        if N_params == 4:
-            result = np.delete(result, 1, axis=1)
-
-        c_array = np.vstack((c_array, result[:, :N_params]))
-        sumstat_all = np.vstack((sumstat_all, result[:, N_params:-1]))
-        dist.append(np.min(result[:, -1]))
-    print('min stores dist:', np.min(dist))
-
-    N_total = len(c_array)
-    print(f'There are {N_total} samples in {N_params}D space')
-    C_limits = define_limits_for_uniform(c_array)
-    np.savez(os.path.join(path['output'], 'joined_data.npz'),
-             c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
-
+    N_total = len(cp_profile)
+    print(f'There are {N_total} samples in {N_PARAMS}D space')
+    np.savez(os.path.join(path['output'], 'joined_profiles.npz'),
+             cp=cp_profile, u=u_profile, uv=uv_profile, u_surface=u_surf_profile)
     ####################################################################################################
     # # ### taking slice
     if N_params == 5 and take_slice:

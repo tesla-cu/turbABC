@@ -5,10 +5,10 @@ from scipy.integrate import odeint
 from time import time
 
 import rans_ode.ode as rans
-from rans_ode.sumstat import calc_sum_stat
 import pyabc.glob_var as g
 import pyabc.distance as dist
 from pyabc.utils import take_safe_log10
+from rans_ode.sumstat import calc_sum_stat
 
 
 if g.norm_order == 1:
@@ -18,7 +18,11 @@ elif g.norm_order == 2:
 
 
 def define_work_function():
-    if g.case == 'impulsive':
+    if g.case == 'impulsive_k':
+        work_function = abc_work_function_impulsive_k
+    elif g.case == 'impulsive_a':
+        work_function = abc_work_function_impulsive_a
+    elif 'impulsive_k' in g.case and 'impulsive_a' in g.case:
         work_function = abc_work_function_impulsive
     elif g.case == 'periodic':
         work_function = abc_work_function_periodic
@@ -26,6 +30,14 @@ def define_work_function():
         work_function = abc_work_function_decay
     elif g.case == 'strain-relax':
         work_function = abc_work_function_strain_relax
+    elif 'impulsive' in g.case and 'periodic' in g.case:
+        work_function = abc_work_function_impulsive_periodic
+    elif 'impulsive' in g.case and 'decay' in g.case:
+        work_function = abc_work_function_impulsive_decay
+    elif g.case == 'validation_exp':
+        work_function = abc_work_function_validation_exp
+    elif g.case == 'validation_nominal':
+        work_function = abc_work_function_validation_nominal
     else:
         logging.error('Unknown work function {}'.format(g.case))
         exit()
@@ -37,6 +49,156 @@ def define_work_function():
 #
 ########################################################################################################################
 def abc_work_function_impulsive(c):
+
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # axisymmetric expansion
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_exp[0]), 200)
+
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_exp), atol=1e-8, mxstep=200)
+    sum_stat_k1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 0], g.Truth.axi_exp_k[:, 0])
+    sum_stat_a1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 2], g.Truth.axi_exp_a[:, 0])
+
+    # axisymmetric contraction
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_con[0]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_con), atol=1e-8, mxstep=200)
+    sum_stat_k2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 0], g.Truth.axi_con_k[:, 0])
+    sum_stat_a2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 2], g.Truth.axi_con_a[:, 0])
+
+    # pure shear
+    tspan = np.linspace(0, 5.2 / (2 * g.Strain.pure_shear[3]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.pure_shear), atol=1e-8, mxstep=200)
+    sum_stat_k3 = calc_sum_stat(2 * g.Strain.pure_shear[3] * tspan, Ynke[:, 0], g.Truth.shear_k[:, 0])
+
+    # plane strain
+    tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
+    sum_stat_k4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 0], g.Truth.plane_k[:, 0])
+    sum_stat_a3 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_a11[:, 0])
+    sum_stat_a4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_a22[:, 0])
+
+    sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4,
+                          sum_stat_a1, sum_stat_a2, sum_stat_a3, sum_stat_a4)) / g.Truth.norm
+    # noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
+    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err)).tolist()
+    return result
+
+
+def abc_work_function_impulsive_k(c):
+
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # axisymmetric expansion
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_exp[0]), 200)
+
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_exp), atol=1e-8, mxstep=200)
+    sum_stat_k1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 0], g.Truth.axi_exp_k[:, 0])
+
+    # axisymmetric contraction
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_con[0]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_con), atol=1e-8, mxstep=200)
+    sum_stat_k2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 0], g.Truth.axi_con_k[:, 0])
+
+    # pure shear
+    tspan = np.linspace(0, 5.2 / (2 * g.Strain.pure_shear[3]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.pure_shear), atol=1e-8, mxstep=200)
+    sum_stat_k3 = calc_sum_stat(2 * g.Strain.pure_shear[3] * tspan, Ynke[:, 0], g.Truth.shear_k[:, 0])
+
+    # plane strain
+    tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
+    sum_stat_k4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 0], g.Truth.plane_k[:, 0])
+
+    sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4)) / g.Truth.norm
+    # noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
+    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err)).tolist()
+    return result
+
+
+def abc_work_function_impulsive_a(c):
+
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # axisymmetric expansion
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_exp[0]), 200)
+
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_exp), atol=1e-8, mxstep=200)
+    sum_stat_a1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 2], g.Truth.axi_exp_a[:, 0])
+
+    # axisymmetric contraction
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_con[0]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_con), atol=1e-8, mxstep=200)
+    sum_stat_a2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 2], g.Truth.axi_con_a[:, 0])
+
+    # plane strain
+    tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
+    sum_stat_a3 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_a11[:, 0])
+    sum_stat_a4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 3], g.Truth.plane_a22[:, 0])
+
+    sum_stat = np.hstack((sum_stat_a1, sum_stat_a2, sum_stat_a3, sum_stat_a4)) / g.Truth.norm
+    # noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
+    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err)).tolist()
+    return result
+
+def abc_work_function_periodic(c):
+    time1 = time()
+    s0 = 3.3
+    beta = [0.125, 0.25, 0.5, 0.75, 1]
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # Periodic shear(five different frequencies)
+    tspan = np.linspace(0, 50/s0, 500)
+    sum_stat = []
+    for i in range(5):
+        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta[i], StrainTensor.periodic_strain),
+                      atol=1e-8, mxstep=200)
+        ss_new = calc_sum_stat(s0 * tspan, take_safe_log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0])
+        sum_stat = np.hstack((sum_stat, ss_new))
+    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    result = np.hstack((c, err)).tolist()
+    time2 = time()
+    if np.isnan(err) or np.isinf(err):
+        print(time2-time1, 'nan/inf = {}'.format(np.isnan(err) or np.isinf(err)), err)
+    return result
+
+
+def abc_work_function_validation_exp(c):
+    time1 = time()
+    s0 = 3.3
+    beta = 1
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # Periodic shear(five different frequencies)
+    tspan = np.linspace(0, 50/s0, 500)
+    Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta, StrainTensor.periodic_strain),
+                  atol=1e-8, mxstep=200)
+    sum_stat = calc_sum_stat(s0 * tspan, Ynke[:, 0], g.Truth.validation_exp[:, 0])
+    err = calc_err(np.log10(sum_stat), g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err))
+    time2 = time()
+    if np.isnan(err) or np.isinf(err):
+        print(time2-time1, 'nan/inf = {}'.format(np.isnan(err) or np.isinf(err)), err, c)
+    return result
+
+
+def abc_work_function_validation_nominal(c):
+    time1 = time()
+    s0 = 3.3
+    beta = 1
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # Periodic shear(five different frequencies)
+    tspan = np.linspace(0, 50/s0, 500)
+    Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta, StrainTensor.periodic_strain),
+                  atol=1e-8, mxstep=200)
+    sum_stat = calc_sum_stat(s0 * tspan, Ynke[:, 0], g.Truth.validation_nominal[:, 0])
+    err = calc_err(np.log10(sum_stat), g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err)).tolist()
+    time2 = time()
+    if np.isnan(err) or np.isinf(err):
+        print(time2-time1, 'nan/inf = {}'.format(np.isnan(err) or np.isinf(err)), err)
+    return result
+
+
+def abc_work_function_impulsive_periodic(c):
 
     u0 = [1, 1, 0, 0, 0, 0, 0, 0]
     # axisymmetric expansion
@@ -61,16 +223,7 @@ def abc_work_function_impulsive(c):
     tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
     Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
     sum_stat_k4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 0], g.Truth.plane_k[:, 0])
-    # sum_stat_b4 = calc_sum_stat(np.abs(g.Strain_plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_b[:, 0],)
 
-    sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4))
-    noise = np.random.normal(loc=0.0, scale=0.0008, size=len(sum_stat))
-    err = calc_err(sum_stat+noise, g.Truth.sumstat_true)
-    result = np.hstack((c, sum_stat, err)).tolist()
-    return result
-
-
-def abc_work_function_periodic(c):
     time1 = time()
     s0 = 3.3
     beta = [0.125, 0.25, 0.5, 0.75, 1]
@@ -83,10 +236,13 @@ def abc_work_function_periodic(c):
                       atol=1e-8, mxstep=200)
         ss_new = calc_sum_stat(s0 * tspan, take_safe_log10(Ynke[:, 0]), g.Truth.periodic_k[i][:, 0])
         sum_stat = np.hstack((sum_stat, ss_new))
+
+    sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4, sum_stat)) / g.Truth.norm
     err = calc_err(sum_stat, g.Truth.sumstat_true)
     result = np.hstack((c, err)).tolist()
     time2 = time()
-    print(time2-time1, 'nan/inf = {}'.format(np.isnan(err) or np.isinf(err)), err)
+    if np.isnan(err) or np.isinf(err):
+        print(time2-time1, 'nan/inf = {}'.format(np.isnan(err) or np.isinf(err)), err)
     return result
 
 
@@ -99,6 +255,48 @@ def abc_work_function_decay(c):
     sum_stat2 = calc_sum_stat(tspan, Ynke[:, 3], g.Truth.decay_a22[:, 0])
     sum_stat3 = calc_sum_stat(tspan, Ynke[:, 4], g.Truth.decay_a33[:, 0])
     sum_stat = np.hstack((sum_stat1, sum_stat2, sum_stat3))
+    err = calc_err(sum_stat, g.Truth.sumstat_true)
+    result = np.hstack((c, sum_stat, err)).tolist()
+    return result
+
+
+def abc_work_function_impulsive_decay(c):
+
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # axisymmetric expansion
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_exp[0]), 200)
+
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_exp), atol=1e-8, mxstep=200)
+    sum_stat_k1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 0], g.Truth.axi_exp_k[:, 0])
+    sum_stat_a1 = calc_sum_stat(np.abs(g.Strain.axi_exp[0]) * tspan, Ynke[:, 2], g.Truth.axi_exp_a[:, 0])
+
+    # axisymmetric contraction
+    tspan = np.linspace(0, 1.6 / np.abs(g.Strain.axi_con[0]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.axi_con), atol=1e-8, mxstep=200)
+    sum_stat_k2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 0], g.Truth.axi_con_k[:, 0])
+    sum_stat_a2 = calc_sum_stat(np.abs(g.Strain.axi_con[0]) * tspan, Ynke[:, 2], g.Truth.axi_con_a[:, 0])
+
+    # pure shear
+    tspan = np.linspace(0, 5.2 / (2*g.Strain.pure_shear[3]), 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.pure_shear), atol=1e-8, mxstep=200)
+    sum_stat_k3 = calc_sum_stat(2 * g.Strain.pure_shear[3] * tspan, Ynke[:, 0], g.Truth.shear_k[:, 0])
+
+    # plane strain
+    tspan = np.linspace(0, 1.6 / g.Strain.plane_strain[0], 200)
+    Ynke = odeint(rans.rans_impulsive, u0, tspan, args=(c, g.Strain.plane_strain), atol=1e-8, mxstep=200)
+    sum_stat_k4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 0], g.Truth.plane_k[:, 0])
+    sum_stat_a3 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_a11[:, 0])
+    sum_stat_a4 = calc_sum_stat(np.abs(g.Strain.plane_strain[0]) * tspan, Ynke[:, 2], g.Truth.plane_a22[:, 0])
+
+    u0 = [1, 1, 0.36, -0.08, -0.28, 0, 0, 0]
+    tspan = np.linspace(0, 0.3, 200)
+    Ynke = odeint(rans.rans_decay, u0, tspan, args=(c, ), atol=1e-8, mxstep=200)
+    sum_stat1 = calc_sum_stat(tspan, Ynke[:, 2], g.Truth.decay_a11[:, 0])
+    sum_stat2 = calc_sum_stat(tspan, Ynke[:, 3], g.Truth.decay_a22[:, 0])
+    sum_stat3 = calc_sum_stat(tspan, Ynke[:, 4], g.Truth.decay_a33[:, 0])
+    sum_stat = np.hstack((sum_stat_k1, sum_stat_k2, sum_stat_k3, sum_stat_k4,
+                          sum_stat_a1, sum_stat_a2, sum_stat_a3, sum_stat_a4,
+                          sum_stat1, sum_stat2, sum_stat3)) / g.Truth.norm
     err = calc_err(sum_stat, g.Truth.sumstat_true)
     result = np.hstack((c, sum_stat, err)).tolist()
     return result

@@ -66,14 +66,22 @@ def find_MAP_kde(Z, a, b):
     return c_map
 
 
-def gaussian_kde_scipy(data, a, b, num_bin_joint):
+def gaussian_kde_scipy(data, a, b, num_bin_joint, bw=None, weights=None):
 
-    logging.info('Scipy: Gaussian KDE {} dimensions with {} bins per dimension'.format(len(a), num_bin_joint))
-
-    kde = gaussian_kde(data.T, bw_method='scott')
+    if hasattr(a, "__len__"):
+        n_params = len(a)
+    else:
+        n_params = 1
+        a, b = [a], [b]
+    logging.info('Scipy: Gaussian KDE {} dimensions with {} bins per dimension'.format(n_params, num_bin_joint))
+    if bw:
+        kde = gaussian_kde(data.T, bw_method=bw, weights=weights)
+    else:
+        kde = gaussian_kde(data.T, bw_method='scott', weights=weights)
     # # evaluate on a regular grid
     grid_mesh, grid_ravel = grid_for_kde(a, b, num_bin_joint)
     time1 = time()
+    print('kde_factor', kde.covariance_factor())
     Z = kde.evaluate(grid_ravel)
     Z = Z.reshape(grid_mesh[0].shape)
     time2 = time()

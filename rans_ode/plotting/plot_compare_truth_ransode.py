@@ -45,15 +45,20 @@ mpl.rcParams['legend.frameon'] = False
 plt.rcParams['axes.linewidth'] = 1
 
 
-folder_valid = '../rans_ode/valid_data/'
+folder_valid = '/Users/olgadorr/Research/ABC_MCMC/rans_ode/valid_data/'
+
 
 def plot_impulsive(c_array, plot_folder):
-    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive')
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive_k')
     Strain = workfunc.StrainTensor(valid_folder=folder_valid)
     u0 = [1, 1, 0, 0, 0, 0, 0, 0]
     # axisymmetric expansion
     if len(c_array.shape) == 1:
         c_array = np.array(c_array).reshape((1, -1))
+    fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
+    ax = plt.gca()
+    fig2 = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
+    ax2 = plt.gca()
     for c in c_array:
         tspan1 = np.linspace(0, 1.5 / np.abs(Strain.axi_exp[0]), 200)
         Ynke1 = odeint(rans.rans_impulsive, u0, tspan1, args=(c, Strain.axi_exp), atol=1e-8, mxstep=200)
@@ -67,9 +72,6 @@ def plot_impulsive(c_array, plot_folder):
         tspan4 = np.linspace(0, 1.5 / Strain.plane_strain[0], 200)
         Ynke4 = odeint(rans.rans_impulsive, u0, tspan4, args=(c, Strain.plane_strain), atol=1e-8, mxstep=200)
 
-        fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
-        ax = plt.gca()
-
         ax.plot(np.abs(Strain.axi_exp[0]) * tspan1, Ynke1[:, 0], label='axisymmetric expansion')
         ax.scatter(Truth.axi_exp_k[:, 0], Truth.axi_exp_k[:, 1], marker='o')
 
@@ -82,6 +84,24 @@ def plot_impulsive(c_array, plot_folder):
         ax.plot(np.abs(Strain.plane_strain[0]) * tspan4, Ynke4[:, 0], label='plain strain')
         ax.scatter(Truth.plane_k[:, 0], Truth.plane_k[:, 1], marker='o')
 
+        # gradient
+        x_diff = np.abs(Strain.axi_exp[0]) * tspan1
+        ax2.plot(np.abs(Strain.axi_exp[0]) * tspan1, np.gradient(Ynke1[:, 0], x_diff), label='axisymmetric expansion')
+        ax2.scatter(Truth.axi_exp_k[:, 0], np.gradient(Truth.axi_exp_k[:, 1], Truth.axi_exp_k[:, 0]), marker='o')
+
+        x_diff = np.abs(Strain.axi_con[0]) * tspan2
+        ax2.plot(np.abs(Strain.axi_con[0]) * tspan2, np.gradient(Ynke2[:, 0], x_diff), label='axisymmetric contraction')
+        ax2.scatter(Truth.axi_con_k[:, 0], np.gradient(Truth.axi_con_k[:, 1], Truth.axi_con_k[:, 0]), marker='o')
+
+        x_diff = 2 * Strain.pure_shear[3] * tspan3
+        ax2.plot(2 * Strain.pure_shear[3] * tspan3, np.gradient(Ynke3[:, 0], x_diff), label='pure shear')
+        ax2.scatter(Truth.shear_k[:, 0], np.gradient(Truth.shear_k[:, 1], Truth.shear_k[:, 0]), marker='o')
+
+        x_diff = np.abs(Strain.plane_strain[0]) * tspan4
+        ax2.plot(np.abs(Strain.plane_strain[0]) * tspan4, np.gradient(Ynke4[:, 0], x_diff), label='plain strain')
+        ax2.scatter(Truth.plane_k[:, 0], np.gradient(Truth.plane_k[:, 1], Truth.plane_k[:, 0]), marker='o')
+
+
     ax.set_xlabel(r'$S\cdot t$')
     ax.set_ylabel(r'$k/k_0$')
     # ax.axis(xmin=0, xmax=5, ymin=0, ymax=2.5)
@@ -89,21 +109,29 @@ def plot_impulsive(c_array, plot_folder):
     fig.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(plot_folder, 'compare_impulsive_k'))
 
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive_a')
+    ax2.set_xlabel(r'$S\cdot t$')
+    ax2.set_ylabel(r'$k/k_0$')
+    # ax.axis(xmin=0, xmax=5, ymin=0, ymax=2.5)
+    plt.legend()
+    fig2.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.95)
+    fig2.savefig(os.path.join(plot_folder, 'compare_impulsive_k_gradient'))
+
     for c in c_array:
         fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
         ax = plt.gca()
 
         ax.plot(np.abs(Strain.axi_exp[0]) * tspan1, Ynke1[:, 2], label=r'axisymmetric expansion $a_{11}$')
-        ax.scatter(Truth.axi_exp_a[:, 0], 2*Truth.axi_exp_a[:, 1], marker='o')
+        ax.scatter(Truth.axi_exp_a[:, 0], Truth.axi_exp_a[:, 1], marker='o')
 
         ax.plot(np.abs(Strain.axi_con[0]) * tspan2, Ynke2[:, 2], label=r'axisymmetric contraction $a_{11}$')
-        ax.scatter(Truth.axi_con_a[:, 0], 2*Truth.axi_con_a[:, 1], marker='o')
+        ax.scatter(Truth.axi_con_a[:, 0], Truth.axi_con_a[:, 1], marker='o')
 
         ax.plot(np.abs(Strain.plane_strain[0]) * tspan4, Ynke4[:, 2], label=r'plain strain $a_{11}$')
-        ax.scatter(Truth.plane_a11[:, 0], 2*Truth.plane_a11[:, 1], marker='o')
+        ax.scatter(Truth.plane_a11[:, 0], Truth.plane_a11[:, 1], marker='o')
 
         ax.plot(np.abs(Strain.plane_strain[0]) * tspan4, Ynke4[:, 3], label=r'plain strain $a_{22}$')
-        ax.scatter(Truth.plane_a22[:, 0], 2*Truth.plane_a22[:, 1], marker='o')
+        ax.scatter(Truth.plane_a22[:, 0], Truth.plane_a22[:, 1], marker='o')
 
     ax.set_xlabel(r'$S\cdot t$')
     ax.set_ylabel(r'$a$')
@@ -142,6 +170,58 @@ def plot_periodic(c_array, plot_folder):
     plt.close('all')
 
 
+def plot_validation_exp(c_array, plot_folder):
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='validation_exp')
+    s0 = 3.3
+    beta = 1
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # Periodic shear(five different frequencies)
+    tspan = np.linspace(0, 50 / s0, 500)
+    fig = plt.figure(figsize=(1 * fig_width, 1.3 * fig_height))
+    ax = plt.gca()
+    if len(c_array.shape) == 1:
+        c_array = np.array(c_array).reshape((1, -1))
+    for c in c_array:
+        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta, workfunc.StrainTensor.periodic_strain),
+                      atol=1e-8, mxstep=200)
+        ax.semilogy(s0*tspan, Ynke[:, 0], label=r'$\omega/S_{max} = $' + f' {beta}')
+        ax.scatter(Truth.validation_exp[:, 0], Truth.validation_exp[:, 1], marker='o')
+
+    ax.set_xlabel(r'$S\cdot t$')
+    ax.set_ylabel(r'$k/k_0$')
+    ax.axis(xmin=0, ymin=0, xmax=51)
+    plt.legend(loc=2, labelspacing=0.2, borderpad=0.0)
+    fig.subplots_adjust(left=0.16, right=0.98, bottom=0.14, top=0.95)
+    fig.savefig(os.path.join(plot_folder, 'compare_periodic_exp'))
+
+    plt.close('all')
+
+
+def plot_validation_nominal(c_array, plot_folder):
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='validation_nominal')
+    s0 = 3.3
+    beta = 0.5
+    u0 = [1, 1, 0, 0, 0, 0, 0, 0]
+    # Periodic shear(five different frequencies)
+    tspan = np.linspace(0, 50 / s0, 500)
+    fig = plt.figure(figsize=(1 * fig_width, 1.3 * fig_height))
+    ax = plt.gca()
+    if len(c_array.shape) == 1:
+        c_array = np.array(c_array).reshape((1, -1))
+    for c in c_array:
+        Ynke = odeint(rans.rans_periodic, u0, tspan, args=(c, s0, beta, workfunc.StrainTensor.periodic_strain),
+                      atol=1e-8, mxstep=200)
+        ax.semilogy(s0*tspan, Ynke[:, 0], label=r'$\omega/S_{max} = $' + f' {beta}')
+        ax.scatter(Truth.validation_nominal[:, 0], Truth.validation_nominal[:, 1], marker='o')
+
+    ax.set_xlabel(r'$S\cdot t$')
+    ax.set_ylabel(r'$k/k_0$')
+    ax.axis(xmin=0, ymin=0, xmax=51)
+    plt.legend(loc=2, labelspacing=0.2, borderpad=0.0)
+    fig.subplots_adjust(left=0.16, right=0.98, bottom=0.14, top=0.95)
+    fig.savefig(os.path.join(plot_folder, 'compare_periodic_nominal'))
+
+    plt.close('all')
 ##########################################################
 # Decay
 ##########################################################
@@ -153,16 +233,17 @@ def plot_decay(c_array, plot_folder):
 
     fig = plt.figure(figsize=(0.8*fig_width, 1.3*fig_height))
     ax = plt.gca()
-    ax.scatter(Truth.decay_a11[:, 0], 2 * Truth.decay_a11[:, 1], color='b', label='exp')
-    ax.scatter(Truth.decay_a22[:, 0], 2 * Truth.decay_a22[:, 1], color='b')
-    ax.scatter(Truth.decay_a22[:, 0], 2 * Truth.decay_a33[:, 1], color='b')
+    ax.scatter(Truth.decay_a11[:, 0], Truth.decay_a11[:, 1], color='m', label='exp')
+    ax.scatter(Truth.decay_a22[:, 0], Truth.decay_a22[:, 1], color='b')
+    ax.scatter(Truth.decay_a22[:, 0], Truth.decay_a33[:, 1], color='r')
     if len(c_array.shape) == 1:
         c_array = np.array(c_array).reshape((1, -1))
     for c in c_array:
         Ynke = odeint(rans.rans_decay, u0, tspan, args=(c,), atol=1e-8, mxstep=200)
         plt.plot(tspan, Ynke[:, 2], 'm--', label='a11')
-        plt.plot(tspan, Ynke[:, 3], 'm--', label='a22')
-        plt.plot(tspan, Ynke[:, 4], 'm--', label='a33')
+        plt.plot(tspan, Ynke[:, 3], 'b--', label='a22')
+        plt.plot(tspan, Ynke[:, 4], 'r--', label='a33')
+
     ax.set_xlabel(r'$\tau$')
     ax.set_ylabel(r'$a$')
     # ax.axis(xmin=0, xmax=0.5, ymin=-0.4, ymax=0.4)
@@ -204,7 +285,7 @@ def plot_strained(c_array, plot_folder):
 def plot_experiment(plot_folder, indices=None):
 
     # impulsive
-    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive')
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive_k')
     fig = plt.figure(figsize=(0.8 * fig_width, 1 * fig_height))
     ax = plt.gca()
     ax.scatter(Truth.axi_exp_k[:, 0], Truth.axi_exp_k[:, 1], marker='o', label='axisymmetric expansion')
@@ -221,12 +302,13 @@ def plot_experiment(plot_folder, indices=None):
     fig.subplots_adjust(left=0.13, right=0.98, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(plot_folder, 'impulsive_k'))
 
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='impulsive_a')
     fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
     ax = plt.gca()
-    ax.scatter(Truth.axi_exp_a[:, 0], 2 * Truth.axi_exp_a[:, 1], marker='o', label=r'axisymmetric expansion $a_{11}$')
-    ax.scatter(Truth.axi_con_a[:, 0], 2 * Truth.axi_con_a[:, 1], marker='o', label=r'axisymmetric contraction $a_{11}$')
-    ax.scatter(Truth.plane_a11[:, 0], 2 * Truth.plane_a11[:, 1], marker='o',  label=r'plain strain $a_{11}$')
-    ax.scatter(Truth.plane_a22[:, 0], 2 * Truth.plane_a22[:, 1], marker='o', label=r'plain strain $a_{22}$')
+    ax.scatter(Truth.axi_exp_a[:, 0], Truth.axi_exp_a[:, 1], marker='o', label=r'axisymmetric expansion $a_{11}$')
+    ax.scatter(Truth.axi_con_a[:, 0], Truth.axi_con_a[:, 1], marker='o', label=r'axisymmetric contraction $a_{11}$')
+    ax.scatter(Truth.plane_a11[:, 0], Truth.plane_a11[:, 1], marker='o',  label=r'plain strain $a_{11}$')
+    ax.scatter(Truth.plane_a22[:, 0], Truth.plane_a22[:, 1], marker='o', label=r'plain strain $a_{22}$')
 
     ax.set_xlabel(r'$S\cdot t$')
     ax.set_ylabel(r'$a$')
@@ -234,6 +316,21 @@ def plot_experiment(plot_folder, indices=None):
     plt.legend()
     fig.subplots_adjust(left=0.15, right=0.98, bottom=0.14, top=0.95)
     fig.savefig(os.path.join(plot_folder, 'impulsive_a'))
+    # Decay
+    Truth = sumstat.TruthData(valid_folder=folder_valid, case='decay')
+    fig = plt.figure(figsize=(0.8 * fig_width, 1.3 * fig_height))
+    ax = plt.gca()
+
+    ax.scatter(Truth.decay_a11[:, 0], 2 * Truth.decay_a11[:, 1], marker='o', label=r'$a_{11}$')
+    ax.scatter(Truth.decay_a22[:, 0], 2 * Truth.decay_a22[:, 1], marker='o', label=r'$a_{22}$')
+    ax.scatter(Truth.decay_a33[:, 0], 2 * Truth.decay_a33[:, 1], marker='o', label=r'$a_{33}$')
+
+    ax.set_xlabel(r'$S\cdot t$')
+    ax.set_ylabel(r'$a$')
+    # ax.axis(xmin=0, xmax=1.5, ymin=0, ymax=2.5)
+    plt.legend()
+    fig.subplots_adjust(left=0.15, right=0.98, bottom=0.14, top=0.95)
+    fig.savefig(os.path.join(plot_folder, 'decay_a'))
     plt.close('all')
 
 

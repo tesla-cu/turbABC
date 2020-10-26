@@ -42,8 +42,7 @@ def main():
     c_array = np.load(os.path.join(path['output'], data_file))['c_array']
     ### tmp
     # sumstat_all = np.load(os.path.join(path['output'], data_file))['sumstat_all']
-    C_limits = np.load(os.path.join(path['output'], data_file))['C_limits']
-    np.savetxt(os.path.join(path['output'], 'C_limits_init'), C_limits)
+    C_limits = np.loadtxt(os.path.join(path['output'], 'C_limits_init'))
     N_total, N_params = c_array.shape
     logging.info(f'There are {N_total} samples total in {N_params}D space')
     # !!! stored summary statistics are not divided by norm

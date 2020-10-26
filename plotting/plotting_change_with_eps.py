@@ -50,8 +50,8 @@ def plot_marginal_change(data_folders, params_names, C_limits, n_bins, plot_fold
     plt.gca().set_prop_cycle(color=color_array)
     labels = []
     if N_params == 4:
-        fig_width, fig_height = fig_size(oneandhalf_column)
-        fig, axarr = plt.subplots(nrows=1, ncols=N_params, figsize=(fig_width, 0.8 * fig_height))
+        fig_width, fig_height = fig_size(double_column)
+        fig, axarr = plt.subplots(nrows=1, ncols=N_params, figsize=(fig_width, 0.7 * fig_height))
     if N_params == 5:
         fig_width, fig_height = fig_size(double_column)
         fig, axarr = plt.subplots(nrows=1, ncols=N_params, figsize=(fig_width, 0.6 * fig_height))
@@ -73,6 +73,8 @@ def plot_marginal_change(data_folders, params_names, C_limits, n_bins, plot_fold
             axarr[i].set_xlabel(params_names[i])
             axarr[i].set_xlim(C_limits[i])
             axarr[i].axis(y_min=0)
+            axarr[i].yaxis.set_major_formatter(plt.NullFormatter())
+            axarr[i].yaxis.set_major_locator(plt.NullLocator())
             # axarr[i].ticklabel_format(axis='y', style='sci', scilimits=(-1, 2))
     # custom_lines = [Line2D([0], [0], color='b', ls='--', lw=4)]
     # legend_labels = ['nominal value']
@@ -86,7 +88,7 @@ def plot_marginal_change(data_folders, params_names, C_limits, n_bins, plot_fold
     if nominal_values:
         for i in range(N_params):
             axarr[i].axvline(nominal_values[i], color='b', linestyle='--')
-    fig.subplots_adjust(left=0.02, right=0.98, wspace=0.06, hspace=0.1, bottom=0.18, top=0.82)
+    fig.subplots_adjust(left=0.02, right=0.98, wspace=0.13, hspace=0.1, bottom=0.2, top=0.82)
     fig.savefig(os.path.join(plot_folder, f'marginal_change_{smooth}'))
     plt.close('all')
 

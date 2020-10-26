@@ -188,8 +188,8 @@ def plot_marginal_pdf(data_folder, C_limits, mirror_limits, num_bin_joint, param
 
                 im_cond = ax.imshow(data[str(i) + str(j)], origin='lower', cmap=cmap2, aspect='auto', extent=ext,
                                     norm=colors.PowerNorm(gamma=gamma2), vmax=max_value2)
-                ax.axvline(c_final_smooth[j], linestyle='--', color='r')
-                ax.axhline(c_final_smooth[i], linestyle='--', color='r')
+                # ax.axvline(c_final_smooth[j], linestyle='--', color='r')
+                # ax.axhline(c_final_smooth[i], linestyle='--', color='r')
     # cax = plt.axes([0.05, 0.1, 0.01, 0.26])
     # plt.colorbar(im, cax=cax)   #, ticks=np.arange(max_value+1))
 

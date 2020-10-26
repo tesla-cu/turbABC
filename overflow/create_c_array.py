@@ -5,11 +5,11 @@ import sys
 import itertools
 
 basefolder = '../overflow_results/output4/'
-N_params = 5
+N_params = 5    # Number of parameters in the model
 ind_param_nominal = 10
-N_per_dim = 6
-# N_per_dim = [6, 7, 6, 7, 8]
-N_jobs = 45
+# N_per_dim = 6     # Number of points is the same in each dimension
+N_per_dim = [6, 7, 6, 7, 8]  # Number of points in each dimension
+N_jobs = 60     # Number of processors (make N_jobs files with parameters)
 
 C_nominal = [0.09, 0.5, 0.075, 0.0828, 0.31]   # beta_star, sigma_w1, beta_1, beta_2, a1
 # np.savetxt(os.path.join(basefolder, 'c_array_nominal'), [C_nominal, C_nominal])
@@ -32,38 +32,54 @@ C_limits = [[0.07, 0.18],   # beta_st
 #             [0.24, 0.36]]       # a1
 
 # if need to add points in the end of file
-add = 0
-# N_per_dim2 = [12, 12, 12, 12]
-# C_limits2 = [[0.0505, 0.2],   # beta_st
-#              [0.14, 1.704],       # beta1/beta*
-#              [-0.85, 23.1275],       # beta2/beta*
-#              [0.222, 0.36]]       # a1
+add = True
+N_per_dim2 = [6, 9, 6, 6, 9]
+C_limits2 = [[0.07, 0.18],   # beta_st
+            [0.1, 2.95],         # sigma_w1
+            [0.2, 3],       # beta1/beta*
+            [-1, 13],       # beta2/beta*
+            [0.16, 0.4]]       # a1
 
 
 def sampling_uniform_grid(N_each, C_limits):
     """ Create list of lists of N parameters manually (make grid) uniformly distributed on given interval
-    :return: list of lists of sampled parameters
+    :param N_each: scalar if the same number of points in each dimension
+                   or list if number of points is different in each dimension
+    :param C_limits: list of bounds in each dimension
+    :return: list of N lists of sampled parameters
     """
     N_params = len(C_limits)
-    if np.isscalar(N_each):
+    if np.isscalar(N_each):     # if N_each is scalar then make a list of same numbers
         N_each = N_each*np.ones(N_params)
+    # create list of 1D uniform grids for each direction
     grid_x = [uniform_grid(C_limits[i], N_each[i]) for i in range(N_params)]
+    # create N-dimensional mesh of samples
     grid_mesh = np.meshgrid(*grid_x, indexing='ij')
+    # convert into list of sampled parameters (lists)
     grid_ravel = np.empty((N_params, np.prod(N_each, dtype=np.int32)))
     for i in range(N_params):
         grid_ravel[i] = grid_mesh[i].ravel()
     grid_ravel = grid_ravel.T
-    print(grid_ravel.shape)
     return grid_ravel
 
 
 def uniform_grid(C_limit, N_each):
+    """ Create 1D uniform grid. Divide in N_each interval and put points in the middle of interval
+    :param C_limit: bounds
+    :param N_each: number of points
+    :return: numpy 1D array of uniformly spaced points
+    """
     C_tmp = np.linspace(C_limit[0], C_limit[1], N_each + 1)
     C_tmp = C_tmp[:-1] + (C_tmp[1] - C_tmp[0]) / 2
     return C_tmp
 
 
 def calc_N(N_total, N_jobs):
+    """ Calculate number of parameters for each processor. Divide equally and then add remaining
+    :param N_total: scalar Number of paraneters
+    :param N_jobs: scalar Number of processors
+    :return: numpy 1D array with number of parameters for each processor
+    """
     N = np.array([int(N_total / N_jobs)] * N_jobs)
     if N_total % N_jobs != 0:
         reminder = N_total % N_jobs
@@ -92,6 +108,7 @@ def main():
     #
     ###################################################################################################################
     if add:
+
         C_array2 = sampling_uniform_grid(N_per_dim2, C_limits2)
         C_array_add = []
         for c in C_array2:
@@ -106,15 +123,20 @@ def main():
         N_newsamples = len(C_array_add)
         print('N new samples = ', N_newsamples)
         N = calc_N(N_newsamples, N_jobs)
-        C_array = C_array_add.copy()
+        C_array = np.array(C_array_add.copy())
         # C_array = np.vstack((C_array, C_array_add))
-        print("C_array.shape:", C_array.shape)
+        N_samples = len(C_array)
+        N = calc_N(N_samples, N_jobs)
+        print("C_array length", len(C_array))
     ###################################################################################################################
     #
     ###################################################################################################################
-    if b_bstar:
-        C_array[:, 2] *= C_array[:, 0]  # beta1
-        C_array[:, 3] *= C_array[:, 0]  # beta2
+    # print('Unique values per dimension')
+    # for i in range(5):
+    #     print(i, np.unique(C_array[:, i]))
+    # if b_bstar:
+    #     C_array[:, 2] *= C_array[:, 0]  # beta1
+    #     C_array[:, 3] *= C_array[:, 0]  # beta2
     ###################################################################################################################
     #
     ###################################################################################################################
@@ -126,6 +148,9 @@ def main():
             os.makedirs(dir)
         np.savetxt(os.path.join(dir, 'c_array_{}'.format(i)), C_array[start:end])
 
+    print('Unique values per dimension')
+    for i in range(5):
+        print(i, np.unique(C_array[:, i]))
     np.savetxt(os.path.join(basefolder, 'C_limits_init'), C_limits)
     # TODO: plot histogram to check that uniform
 

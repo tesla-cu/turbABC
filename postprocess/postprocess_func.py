@@ -9,7 +9,14 @@ TINY = 1e-8
 
 
 def calc_raw_joint_pdf(accepted, num_bin_joint, C_limits, weights=None):
+    """
 
+    :param accepted:
+    :param num_bin_joint:
+    :param C_limits:
+    :param weights:
+    :return:
+    """
     N_params = len(C_limits)
     C_final_joint = []
     H, edges = np.histogramdd(accepted, bins=num_bin_joint, range=C_limits, weights=weights)
@@ -135,7 +142,7 @@ def mirror_data_for_kde(points, left, right, weights=None):
 
     k = 1  # coefficient for reflection interval
     size = k * bw_from_kdescipy(points)
-    print('percent of interval to reflect', size / (np.array(right) - np.array(left)))
+    print('percent of interval to reflect', 100*size / (np.array(right) - np.array(left)))
     # print('size/bin', size/((np.array(right) - np.array(left)) / np.array([5, 5, 6, 7])))
 
     new_points = list(points)

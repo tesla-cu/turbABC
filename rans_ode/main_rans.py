@@ -35,6 +35,7 @@ def main():
         handlers=[logging.FileHandler("{0}/{1}.log".format(g.path['output'], 'ABC_log')), logging.StreamHandler()],
         level=logging.DEBUG)
 
+    g.N_params = len(input['C_limits'])
     # ABC algorithm
     algorithm_input = input['algorithm'][input['abc_algorithm']]
     # RANS ode specific
@@ -63,7 +64,7 @@ def main():
     elif input['abc_algorithm'] == 'abc_IMCMC':    # MCMC with calibration step (Wegmann 2009)
         logging.info("ABC-MCMC algorithm")
         logging.info('Calibration')
-        abc_alg.calibration(algorithm_input, C_limits)
+        abc_alg.one_calibration(algorithm_input, C_limits)
         logging.info('Chains')
         g.N_per_chain = algorithm_input['N_per_chain']
         g.t0 = algorithm_input['t0']

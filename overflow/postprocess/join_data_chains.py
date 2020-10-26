@@ -11,14 +11,20 @@ N_PARAMS = 4
 def load_data(folders, len_sumstat):
     N_total, diff = 0, 0
     result = np.empty((0, N_PARAMS + len_sumstat + 1))   # + 5 parameters in the beginning and distance in the end
+    chain_ind = np.empty((len(folders), 2), dtype=np.int32)
+    start = 0
     for i, folder in enumerate(folders):
         print('job {}'.format(i))
+        chain_ind[i, 0] = start
         with open(os.path.join(folder, 'result.dat')) as f:
             lines = f.readlines()
+            end = start+len(lines)
+            chain_ind[i, 1] = end
+            start = end
             for line in lines:
                 d = np.fromstring(line[1:-1], dtype=float, sep=',')
                 result = np.vstack((result, d))
-    return result
+    return result, chain_ind
 
 
 def join_profiles(folders, cp, u, uv, u_surf):
@@ -62,11 +68,12 @@ def main():
     # N_jobs = [200]
     # raw_folders = ['chains_limits']
     ##################################
-    basefolder = '../'
-    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits/'),
-            'valid_data': '../overflow/valid_data/'}
-    N_jobs = 200
-    data_folder = 'chains_limits'
+    basefolder = '../../'
+    path = {'output': os.path.join(basefolder, 'overflow_results/chains_limits_1/'),
+            'valid_data': '../../overflow/valid_data/',
+            'nominal_data': '../nominal_data/'}
+    N_jobs = 10
+    data_folder = path['output']
     folders = [os.path.join(data_folder, 'chain_{}'.format(n), ) for n in range(N_jobs)]
     ##################################
     if not os.path.isdir(path['output']):
@@ -81,20 +88,24 @@ def main():
     sumstat_length = len(Truth.sumstat_true)
     ####################################################################################################
     logging.info('Loading c_array data')
-    c_array = np.empty((0, N_PARAMS))
-    sumstat_all = np.empty((0, sumstat_length))
-    dist = []
-    result = load_data(folders, sumstat_length)  # to check length need c_array_* files
-    c_array = np.vstack((c_array, result[:, :N_PARAMS]))
-    sumstat_all = np.vstack((sumstat_all, result[:, N_PARAMS:-1]))
-    dist.append(np.min(result[:, -1]))
+    result, chain_ind = load_data(folders, sumstat_length)  # to check length need c_array_* files
+    c_array = result[:, :N_PARAMS]
+    sumstat_all = result[:, N_PARAMS:-1]
+    dist = result[:, -1]
     print('min stores dist:', np.min(dist))
-
     N_total = len(c_array)
     print(f'There are {N_total} samples in {N_PARAMS}D space')
     C_limits = define_limits_for_uniform(c_array)
     np.savez(os.path.join(path['output'], 'joined_data.npz'),
-             c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, N_total=N_total)
+             c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, dist=dist, N_total=N_total)
+
+    for i, (start, end) in enumerate(chain_ind):
+        print(start, end)
+        c_array = result[start:end, :N_PARAMS]
+        sumstat_all = result[start:end, N_PARAMS:-1]
+        dist = result[start:end, -1]
+        np.savez(os.path.join(path['output'], f'chain{i}.npz'),
+                 c_array=c_array, sumstat_all=sumstat_all, C_limits=C_limits, dist=dist, N_total=N_total)
     ####################################################################################################
     ####################################################################################################
     logging.info('Loading profiles data')

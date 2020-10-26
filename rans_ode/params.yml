@@ -3,7 +3,10 @@ path:
   'output': '/Users/olgadorr/Research/ABC_MCMC/rans_output/'
   'valid_data': '/Users/olgadorr/Research/ABC_MCMC/rans_ode/valid_data/'     # truth data
 ########################################################################################################################
-case: 'impulsive'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
+case: 'validation_nominal'
+#  - 'impulsive_k'
+#  - 'impulsive_a'                 # options: 'impulsive', 'periodic', 'decay', 'strain-relax'
+#  - 'decay'
 ########################################################################################################################
 abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 #################################################################################################################
@@ -12,19 +15,19 @@ abc_algorithm: 'abc'       # options: 'abc', 'abc_IMCMC', 'abc_MCMC_adaptive'
 algorithm:
   abc:
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
-      N: 10              # per dimension
+      N: 25             # per dimension
   ############################################################################################################
   abc_IMCMC:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
-      N_calibration:
-        - 6                  # recommended 10
-        - 6                  # recommended 10
-      x:
-        - 0.1                  # percent of accepted for calibration step 1
-        - 0.1                  # percent of accepted for calibration step 2
+      N_calibration: 6
+#        - 6                  # recommended 10
+#        - 6                  # recommended 10
+      x: 0.05
+#        - 0.1                  # percent of accepted for calibration step 1
+#        - 0.1                  # percent of accepted for calibration step 2
       phi: 1
-      prior_update: 10          # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
+      prior_update: 0          # 0 or Number of bins per dimension (to update the prior based on calibration posterior)
       # MCMC
       N_per_chain: 500
       t0: 100                  # burn-in period without kernel adaptation
@@ -36,19 +39,15 @@ algorithm:
   ############################################################################################################
 ########################################################################################################################
 C_limits:
-  - [1.2, 2.2]
-  - [0.6, 0.8]
-  - [1.6, 2]
-  - [1.75, 2.05]
+  - [.5, 4.0]
+  - [0.0, 2.5]
+  - [0.0, 3.]
+  - [1.0, 2.5]
 C_nominal:
-#  - 1.5
-#  - 0.8
-#  - 1.44
-#  - 1.92
-  - 1.4
-  - 0.71
-  - 1.854
-  - 1.912
+  - 1.5
+  - 0.8
+  - 1.44
+  - 1.92
 ########################################################################################################################
 parallel_threads: 4          # Number of processes
 ########################################################################################################################
