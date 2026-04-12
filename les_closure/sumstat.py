@@ -12,7 +12,7 @@ class TruthData(object):
         dns_data = data.load_HIT_data(valid_folder, data_params['N_point'])
         n_points = [data_params['N_point']] * 3
         dx = np.array([data_params['lx'] / data_params['N_point']] * 3)
-        les_data = data.DataFiltered.filter3d(data=dns_data, scale_k=data_params['LES_scale'], dx=dx, N_points=n_points)
+        les_data = data.DataFiltered.filter3d_dict(data=dns_data, scale_k=data_params['LES_scale'], dx=dx)
         sigma_field = self.calc_sigma_field(les_data)
         strain_filtered = data.calc_strain_tensor(les_data, dx)
         Sumstat = SummaryStatistics(sumstat_params)

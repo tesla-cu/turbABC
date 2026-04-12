@@ -3,7 +3,7 @@ import sys
 import logging
 import yaml
 import numpy as np
-sys.path.append('/Users/olgadorr/Research/ABC_MCMC')
+sys.path.append('/Users/olga/Projects/ABC/turbABC')
 print(sys.path)
 import sumstat
 import model
@@ -23,7 +23,7 @@ def main():
         input_path = sys.argv[1]
     else:
         input_path = os.path.join('./', 'params.yml')
-    input = yaml.load(open(input_path, 'r'))
+    input = yaml.safe_load(open(input_path, 'r'))
 
     ### Paths
     g.path = input['path']
@@ -58,6 +58,7 @@ def main():
                                       calc_strain_flag=g.SumStat.sumstat_type != 'sigma_pdf_log')
 
     C_limits = np.array(input['C_limits'])[:input['model']['N_params']]
+    g.N_params = len(C_limits)
     logging.info('C_limits: {}'.format(C_limits))
     np.savetxt(os.path.join(g.path['output'], 'C_limits_init'), C_limits)
 

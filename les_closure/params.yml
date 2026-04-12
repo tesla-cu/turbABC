@@ -2,9 +2,9 @@
 # Data
 data:
   load: 1 # 0 = DNS, 1 = LES(and TEST), 2 = sparse, 3 = model
-  data_path: './ABC/data_input/JHU_data/'
+  data_path: './JHU_data/'
 path:
-  'output': './ABC/output/'
+  'output': './output/'
   'valid_data': './valid_data/'
 ########################################################################################################################
 # Initial case parameters
@@ -50,8 +50,8 @@ algorithm:
       # Calibration
       sampling: 'uniform'     # 'uniform', 'random', 'sobol'
       N_calibration:
-        - 6                  # recommended 10
-        - 6                  # recommended 10
+        - 10                  # recommended 10
+        - 10                  # recommended 10
       x:
         - 0.1                  # percent of accepted for calibration step 1
         - 0.1                  # percent of accepted for calibration step 2
@@ -60,6 +60,7 @@ algorithm:
       # MCMC
       N_per_chain: 500
       t0: 100                  # burn-in period without kernel adaptation
+      t_adapt: 400
   ############################################################################################################
   abc_MCMC_adaptive:
       t0: 50
@@ -83,6 +84,6 @@ C_limits:
   - [-1, 1]
 ########################################################################################################################
 # Parallel regime parameters
-parallel_threads: 4          # Number of processes
+parallel_threads: 8         # Number of processes
 ########################################################################################################################
 

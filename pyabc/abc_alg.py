@@ -185,21 +185,28 @@ def one_chain(chain_id):
     N = g.N_per_chain
     C_limits = g.C_limits
     N_params = g.N_params
-    C_init = np.loadtxt(os.path.join(g.path['output'], 'C_start')).reshape((-1, N_params))[chain_id]
+    
     result_c = np.empty((N, N_params))
     result_sumstat = np.empty((N, len(g.Truth.sumstat_true)))
     result_dist = np.empty(N)
+
     s_d = 2.4 ** 2 / N_params  # correct covariance according to dimensionality
 
+    # init
+    C_init = np.loadtxt(os.path.join(g.path['output'], 'C_start')).reshape((-1, N_params))[chain_id]
     # add first param
     if not g.restart_chain:
+        # evaluate initial state
         result = g.work_function(C_init)
         print(C_init, len(result))
         logging.info(f'dist = {result[-1]}, eps = {g.eps}')
         result_c[0], result_sumstat[0], result_dist[0] = result_split(result, N_params)
+
         start = 0
         counter_sample = 0
         counter_dist = 0
+        accepted_count = 0
+
         mean_prev = C_init
         cov_prev = g.std
         #g.save_chain_step(result, cov_prev, 0, counter_sample, counter_dist, other)
@@ -215,13 +222,14 @@ def one_chain(chain_id):
         if len(g.c_array) != start:
             start = start + 100
         result_c[:start+1] = g.c_array
+
     ####################################################################################################################
     def mcmc_step_nolimits(i):
         nonlocal mean_prev, cov_prev, counter_sample, counter_dist
         while True:
             counter_sample += 1
             c = chain_kernel(result_c[i - 1], s_d*cov_prev)
-            result, *other = g.work_function(c)
+            result = g.work_function(c)
             logging.info(f'dist = {result[-1]}, eps = {g.eps}')
             counter_dist += 1
             if result[-1] <= g.eps:  # distance < epsilon
@@ -232,11 +240,49 @@ def one_chain(chain_id):
         logging.debug(f"accepted {result_c[i]}")
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return result, other
+        return [result]
 
     ####################################################################################################################
     def mcmc_step(i):
-        nonlocal mean_prev, cov_prev, counter_sample, counter_dist
+        nonlocal mean_prev, cov_prev, counter_sample, counter_dist, accepted_count
+        
+        # ---- propose sample ----
+        c = chain_kernel(result_c[i - 1], s_d*cov_prev)
+        counter_sample += 1
+
+        # ---- check priorbounds ----
+        if False in (C_limits[:, 0] < c) * (c < C_limits[:, 1]):
+            # reject immediately → stay
+            result_c[i] = result_c[i-1]
+            result_sumstat[i] = result_sumstat[i-1]
+            result_dist[i] = result_dist[i-1]
+            return [None]
+
+        # ---- simulate ----
+        result = g.work_function(c)
+        counter_dist += 1
+
+        # ---- ABC acceptance ----
+        if result[-1] <= g.eps:  # distance < epsilon
+            # accept
+            accepted_count += 1
+            result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
+        else:
+            # reject → stay
+            result_c[i] = result_c[i-1]
+            result_sumstat[i] = result_sumstat[i-1]
+            result_dist[i] = result_dist[i-1]
+
+        # ---- adapt covariance (bounded adaptation) ----
+        if g.t0 <= i <= g.t_adapt:
+            cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
+            # add covariance regularization
+            cov_prev += 1e-6 * np.eye(N_params)
+        return [result]
+
+    ####################################################################################################################
+    def mcmc_step_prior(i):
+        nonlocal mean_prev, cov_prev, counter_sample, counter_dist, accepted_count
         while True:
             while True:
                 counter_sample += 1
@@ -244,65 +290,54 @@ def one_chain(chain_id):
                 if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
                     break
             result = g.work_function(c)
-            # logging.info(f'dist = {result[-1]}, eps = {g.eps}')
-            counter_dist += 1
-            if result[-1] <= g.eps:  # distance < epsilon
-                result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
-                break
-            #else:
-            #    g.save_failed_step(result, i-1, counter_sample, counter_dist)
-        # logging.debug(f"accepted {result_c[i]}")
-        if i >= g.t0:
-            cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return result
-
-    ####################################################################################################################
-    def mcmc_step_prior(i):
-        nonlocal mean_prev, cov_prev, counter_sample, counter_dist
-        while True:
-            while True:
-                counter_sample += 1
-                c = chain_kernel(result_c[i - 1], s_d*cov_prev)
-                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                    break
-            result, *other = g.work_function(c)
             counter_dist += 1
             if result[-1] <= g.eps:
                 prior_values = g.prior_interpolator([result_c[i - 1], c])
                 if np.random.random() < prior_values[0] / prior_values[1]:
+                    accepted_count += 1
                     result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
                     break
         if i >= g.t0:
             cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return result, other
+        return [result]
 
     ####################################################################################################################
-    def mcmc_step_adaptive(i):
-        nonlocal mean_prev, cov_prev, counter_sample, counter_dist, delta
-        while True:
-            while True:
-                counter_sample += 1
-                c = chain_kernel(result_c[i - 1], s_d * cov_prev)
-                if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
-                    break
-            result, other = g.work_function(c)
-            counter_dist += 1
-            if result[-1] <= delta:  # distance < eps
-                result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
-                delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
-                break
-            else:
-                delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
-        if i >= g.t0:
-            cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
-        return result, other
+    # def mcmc_step_adaptive(i):
+    #     nonlocal mean_prev, cov_prev, counter_sample, counter_dist, delta, accepted_count
+    #     while True:
+    #         # sample within prior bounds
+    #         counter_sample += 1
+    #         c = chain_kernel(result_c[i - 1], s_d * cov_prev)
+    #         if not (False in (C_limits[:, 0] < c) * (c < C_limits[:, 1])):
+    #             break
+    #     result, other = g.work_function(c)
+    #     counter_dist += 1
+    #     if result[-1] <= delta:  # distance < eps
+    #         # accept
+    #         result_c[i], result_sumstat[i], result_dist[i] = result_split(result, N_params)
+            
+    #         delta *= np.exp((i + 1) ** (-2 / 3) * (target_acceptance - 1))
+    #         accepted_count += 1
+    #     else:
+    #         # reject → stay
+    #         result_c[i] = result_c[i-1]
+    #         result_sumstat[i] = result_sumstat[i-1]
+    #         result_dist[i] = result_dist[i-1]
+
+    #         delta *= np.exp((i + 1) ** (-2 / 3) * target_acceptance)
+    #     if i >= g.t0:
+    #         # adapt covariance after burn-in
+    #         cov_prev, mean_prev = utils.covariance_recursive(result_c[i], i, cov_prev, mean_prev)
+    #         # add covariance regularization
+    #         # cov_prev += 1e-6 * np.eye(N_params)
+    #     return result, other
     #######################################################
     # Markov Chain
     # if changed prior after calibration step
     if g.prior_interpolator is not None:
         mcmc_step = mcmc_step_prior
-    elif g.target_acceptance is not None:
-        mcmc_step = mcmc_step_adaptive
+    # elif g.target_acceptance is not None:
+    #     mcmc_step = mcmc_step_adaptive
     elif C_limits is not None:
         mcmc_step = mcmc_step
     else:

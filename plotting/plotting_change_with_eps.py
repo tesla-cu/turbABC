@@ -25,7 +25,7 @@ mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1
 mpl.rcParams['ytick.minor.width'] = 1
 plt.rcParams['axes.linewidth'] = 1
-mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = 'serif'
 mpl.rc('text', usetex=True)
 # dessertation size
 single_column = 235

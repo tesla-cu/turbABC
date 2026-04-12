@@ -1,6 +1,12 @@
 import os
+import sys
 import numpy as np
 # from sklearn.metrics import r2_score
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
 import postprocess.regression as regression
 import matplotlib as mpl
 
@@ -29,7 +35,7 @@ mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1
 mpl.rcParams['ytick.minor.width'] = 1
 plt.rcParams['axes.linewidth'] = 1
-mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = 'serif'
 mpl.rc('text', usetex=True)
 # dessertation size
 single_column = 235

@@ -4,6 +4,11 @@ import os
 import sys
 import glob
 import yaml
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
 import postprocess.postprocess_func as pp
 from pyabc.kde import kdepy_fftkde, find_MAP_kde
 import rans_ode.sumstat as sumstat
@@ -16,15 +21,15 @@ def main(args):
     if len(args) > 1:
         input_path = args[1]
     else:
-        input_path = os.path.join('../rans_output/', 'params.yml')
-
-    input = yaml.load(open(input_path, 'r'))
+        input_path = os.path.join('../les_closure/', 'params.yml')
+        
+    input = yaml.safe_load(open(input_path, 'r'))
 
     ### Paths
     basefolder = '../'
-    path = {'output': os.path.join(basefolder, 'rans_output/'),
-            'plots': os.path.join(basefolder, 'rans_plots/'),
-            'valid_data': os.path.join(basefolder, 'rans_ode' , 'valid_data')}
+    path = {'output': os.path.join(basefolder,'les_closure/output/'),
+            'plots': os.path.join(basefolder, 'les_closure/plots/'),
+            'valid_data': os.path.join(basefolder, 'les_closure' , 'valid_data')}
     # path = input['path']
     path['calibration'] = os.path.join(path['output'], 'calibration/')
     N_chains = input['parallel_threads']

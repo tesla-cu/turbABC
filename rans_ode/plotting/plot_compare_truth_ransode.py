@@ -29,7 +29,7 @@ mpl.rcParams['legend.fontsize'] = plt.rcParams['font.size']-1
 mpl.rcParams['xtick.labelsize'] = 0.8*plt.rcParams['font.size']
 mpl.rcParams['ytick.labelsize'] = 0.8*plt.rcParams['font.size']
 
-mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = 'serif'
 mpl.rc('text', usetex=True)
 
 mpl.rcParams['xtick.major.size'] = 3

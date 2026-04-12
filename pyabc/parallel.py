@@ -13,7 +13,14 @@ class Parallel(object):
         logging.info('Available {} workers'.format(mp.cpu_count()))
 
     def run(self, func, tasks):
-        pool = mp.Pool(processes=self.proc)
+        # Prefer fork where available so workers inherit pre-initialized globals.
+        # This avoids missing runtime state in spawned workers on macOS.
+        if 'fork' in mp.get_all_start_methods():
+            ctx = mp.get_context('fork')
+        else:
+            ctx = mp.get_context()
+        logging.debug('Multiprocessing start method: %s', ctx.get_start_method())
+        pool = ctx.Pool(processes=self.proc)
         if self.bar == 1:
             logging.debug('Progress bar changed')
             try:
